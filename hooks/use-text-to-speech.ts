@@ -47,10 +47,11 @@ export function useTextToSpeech({ onStart, onEnd, onError }: UseTextToSpeechProp
     async (text: string) => {
       if (!text) return
 
-      // If audio isn't enabled yet, don't even try to play
+      // If audio isn't enabled yet, don't try to play and return early
       if (!audioEnabled) {
+        console.warn("Attempted to speak before audio was enabled")
         if (onError) onError(new Error("Audio is not enabled. Please enable audio first."))
-        return
+        return Promise.reject(new Error("Audio is not enabled"))
       }
 
       try {
@@ -123,18 +124,22 @@ export function useTextToSpeech({ onStart, onEnd, onError }: UseTextToSpeechProp
               audioRef.current = null
             })
           }
+
+          return playPromise // Return the promise so caller can handle it
         } catch (playError) {
           console.error("Error playing audio:", playError)
           if (onError) onError(new Error("Failed to play audio. Browser may be blocking autoplay."))
           // Clean up
           URL.revokeObjectURL(audioUrl)
           audioRef.current = null
+          throw playError
         }
       } catch (error) {
         console.error("Error generating speech:", error)
         if (onError && error instanceof Error) {
           onError(error)
         }
+        throw error
       } finally {
         setIsLoading(false)
       }

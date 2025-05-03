@@ -81,7 +81,7 @@ export function FormNavigation({ currentStep, totalSteps, onNext, onPrev, onSubm
   }
 
   return (
-    <div className="flex justify-between mt-8">
+    <div className="flex justify-between mt-8 pb-20 md:pb-8">
       {currentStep > 0 && (
         <button
           type="button"
@@ -92,32 +92,37 @@ export function FormNavigation({ currentStep, totalSteps, onNext, onPrev, onSubm
         </button>
       )}
 
-      {currentStep < totalSteps - 1 ? (
-        <button
-          type="button"
-          onClick={handleNext}
-          className="ml-auto px-6 py-2 text-white rounded-md bg-[#58317A] hover:bg-[#482968]"
-        >
-          Next
-        </button>
-      ) : (
-        <button
-          type="submit"
-          onClick={async (e) => {
-            e.preventDefault()
-            const isValid = await validateCurrentStep()
-            if (isValid) {
-              onSubmit()
-            } else {
-              // Show validation message
-              alert("Please fill in all required fields before submitting.")
-            }
-          }}
-          className="ml-auto px-6 py-2 text-white rounded-md bg-[#58317A] hover:bg-[#482968]"
-        >
-          Submit
-        </button>
-      )}
+      <div className={`${currentStep > 0 ? "absolute left-1/2 transform -translate-x-1/2" : ""}`}>
+        {currentStep < totalSteps - 1 ? (
+          <button
+            type="button"
+            onClick={handleNext}
+            className="px-6 py-2 text-white rounded-md bg-[#58317A] hover:bg-[#482968]"
+          >
+            Next
+          </button>
+        ) : (
+          <button
+            type="submit"
+            onClick={async (e) => {
+              e.preventDefault()
+              const isValid = await validateCurrentStep()
+              if (isValid) {
+                onSubmit()
+              } else {
+                // Show validation message
+                alert("Please fill in all required fields before submitting.")
+              }
+            }}
+            className="px-6 py-2 text-white rounded-md bg-[#58317A] hover:bg-[#482968]"
+          >
+            Submit
+          </button>
+        )}
+      </div>
+
+      {/* Empty div to maintain flex spacing when Previous button is not shown */}
+      {currentStep === 0 && <div></div>}
     </div>
   )
 }

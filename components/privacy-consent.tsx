@@ -45,42 +45,30 @@ export function PrivacyConsent({ onAccept }: PrivacyConsentProps) {
           <div className="bg-gray-50 p-4 rounded-md h-48 overflow-y-auto mb-4 text-sm">
             <p className="mb-3">
               PlataPay is committed to protecting your privacy and ensuring the security of your personal information.
-              This Privacy Policy outlines how we collect, use, disclose, and safeguard your data when you use our
-              services.
+              This is a summary of our Privacy Policy which outlines how we collect, use, disclose, and safeguard your
+              data.
             </p>
 
             <p className="mb-3">
-              <strong>Information We Collect:</strong> We collect personal information such as your name, contact
-              details, identification documents, business information, and location data when you register as an agent.
-              We may also collect information about your device and how you use our services.
+              <strong>Information We Collect:</strong> Personal information such as name, contact details, ID documents,
+              business information, and location data when you register as an agent.
             </p>
 
             <p className="mb-3">
-              <strong>How We Use Your Information:</strong> We use your information to provide and improve our services,
-              process transactions, communicate with you, comply with legal obligations, and protect against fraudulent
-              activities.
+              <strong>How We Use Your Information:</strong> To provide services, process transactions, communicate with
+              you, comply with legal obligations, and protect against fraud.
             </p>
 
             <p className="mb-3">
-              <strong>Data Sharing and Disclosure:</strong> We may share your information with service providers,
-              financial institutions, regulatory authorities, and other third parties as necessary to provide our
-              services or as required by law.
-            </p>
-
-            <p className="mb-3">
-              <strong>Data Security:</strong> We implement appropriate technical and organizational measures to protect
-              your personal information against unauthorized access, alteration, disclosure, or destruction.
-            </p>
-
-            <p className="mb-3">
-              <strong>Your Rights:</strong> You have the right to access, correct, update, or request deletion of your
-              personal information. You may also object to processing or request restriction of processing in certain
-              circumstances.
-            </p>
-
-            <p>
-              <strong>Changes to This Policy:</strong> We may update this Privacy Policy from time to time. We will
-              notify you of any changes by posting the new policy on our website.
+              For the complete Privacy Policy, please visit{" "}
+              <a
+                href="https://platapay.ph/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#58317A] underline hover:text-[#3D2268]"
+              >
+                platapay.ph/privacy
+              </a>
             </p>
           </div>
 
@@ -91,36 +79,29 @@ export function PrivacyConsent({ onAccept }: PrivacyConsentProps) {
             </p>
 
             <p className="mb-3">
-              <strong>Eligibility:</strong> You must be at least 18 years old and have the legal capacity to enter into
-              a binding agreement. You must provide accurate and complete information during the application process.
+              <strong>Eligibility:</strong> You must be at least 18 years old and provide accurate information.
             </p>
 
             <p className="mb-3">
-              <strong>Agent Responsibilities:</strong> As a PlataPay agent, you agree to comply with all applicable laws
-              and regulations, maintain the confidentiality of customer information, provide accurate information about
-              PlataPay services, and maintain sufficient funds to facilitate transactions.
+              <strong>Agent Responsibilities:</strong> Comply with laws, maintain customer confidentiality, provide
+              accurate information about services, and maintain sufficient funds.
             </p>
 
             <p className="mb-3">
-              <strong>Commission and Fees:</strong> You will receive commissions for transactions processed through your
-              agent account according to the commission structure provided by PlataPay. Commission rates may be subject
-              to change with notice.
+              <strong>Commission and Fees:</strong> You will receive commissions according to the structure provided by
+              PlataPay.
             </p>
 
             <p className="mb-3">
-              <strong>Termination:</strong> PlataPay reserves the right to terminate your agent status at any time if
-              you violate these terms and conditions, engage in fraudulent activities, or fail to comply with applicable
-              laws and regulations.
-            </p>
-
-            <p className="mb-3">
-              <strong>Limitation of Liability:</strong> PlataPay shall not be liable for any indirect, incidental,
-              special, consequential, or punitive damages arising out of or in connection with your use of our services.
-            </p>
-
-            <p>
-              <strong>Governing Law:</strong> These terms and conditions shall be governed by and construed in
-              accordance with the laws of the Philippines.
+              For the complete Terms and Conditions, please visit{" "}
+              <a
+                href="https://platapay.ph/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#58317A] underline hover:text-[#3D2268]"
+              >
+                platapay.ph/terms
+              </a>
             </p>
           </div>
 
@@ -135,7 +116,25 @@ export function PrivacyConsent({ onAccept }: PrivacyConsentProps) {
               />
             </div>
             <label htmlFor="consent" className="ml-2 block text-sm text-gray-700">
-              I have read and agree to PlataPay's Privacy Policy and Terms & Conditions.
+              I have read and agree to PlataPay's{" "}
+              <a
+                href="https://platapay.ph/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#58317A] hover:text-[#3D2268]"
+              >
+                Privacy Policy
+              </a>{" "}
+              and{" "}
+              <a
+                href="https://platapay.ph/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#58317A] hover:text-[#3D2268]"
+              >
+                Terms & Conditions
+              </a>
+              .
             </label>
           </div>
 
