@@ -19,6 +19,8 @@ export default function ApplicationForm() {
   const [consentAccepted, setConsentAccepted] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
   const [showAssistant, setShowAssistant] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitSuccess, setSubmitSuccess] = useState(false)
 
   const formMethods = useForm({
     mode: "onChange",
@@ -41,6 +43,8 @@ export default function ApplicationForm() {
         street: "",
         brgy: "",
         city: "",
+        municipality: "",
+        province: "",
         region: "",
         country: "Philippines",
         zipCode: "",
@@ -78,8 +82,9 @@ export default function ApplicationForm() {
         street: "",
         brgy: "",
         city: "",
-        region: "",
+        municipality: "",
         province: "",
+        region: "",
         country: "Philippines",
         zipCode: "",
       },
@@ -154,10 +159,23 @@ export default function ApplicationForm() {
     }
   }
 
-  const onSubmit = (data: any) => {
-    console.log("Form submitted:", data)
-    // Here you would typically send the data to your server
-    alert("Form submitted successfully!")
+  const onSubmit = async (data: any) => {
+    try {
+      setIsSubmitting(true)
+      console.log("Form submitted:", data)
+
+      // Here you would typically send the data to your server
+      // For now, we'll simulate a successful submission
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+
+      setSubmitSuccess(true)
+      alert("Form submitted successfully!")
+    } catch (error) {
+      console.error("Error submitting form:", error)
+      alert("There was an error submitting the form. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleConsentAccepted = () => {
@@ -166,6 +184,29 @@ export default function ApplicationForm() {
 
   if (!consentAccepted) {
     return <PrivacyConsent onAccept={handleConsentAccepted} />
+  }
+
+  if (submitSuccess) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#8A63AC] to-[#58317A] flex items-center justify-center">
+        <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-lg text-center">
+          <div className="flex justify-center mb-6">
+            <Logo size="large" />
+          </div>
+          <h1 className="text-2xl font-bold text-[#58317A] mb-4">Application Submitted Successfully!</h1>
+          <p className="mb-6">
+            Thank you for applying to become a PlataPay business partner. We have received your application and will
+            review it shortly. You will receive an email with further instructions.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-[#58317A] text-white rounded-md hover:bg-[#482968]"
+          >
+            Submit Another Application
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (

@@ -14,12 +14,22 @@ export function FormNavigation({ currentStep, totalSteps, onNext, onPrev, onSubm
   const {
     watch,
     formState: { errors },
+    trigger,
   } = useFormContext()
 
   // Basic validation checks for each step
-  const canProceed = () => {
+  const validateCurrentStep = async () => {
+    // Trigger validation for the current step fields
+    const isValid = await trigger()
+
+    if (!isValid) {
+      console.log("Form validation failed", errors)
+      return false
+    }
+
     const formData = watch()
 
+    // Additional custom validation logic
     switch (currentStep) {
       case 0: // Personal Information
         return (
@@ -37,7 +47,7 @@ export function FormNavigation({ currentStep, totalSteps, onNext, onPrev, onSubm
         return (
           formData.proposedLocation &&
           formData.locationAddress.region &&
-          formData.locationAddress.city &&
+          (formData.locationAddress.city || formData.locationAddress.municipality) &&
           formData.locationAddress.street &&
           formData.locationAddress.zipCode &&
           formData.latitude &&
@@ -60,6 +70,16 @@ export function FormNavigation({ currentStep, totalSteps, onNext, onPrev, onSubm
     }
   }
 
+  const handleNext = async () => {
+    const isValid = await validateCurrentStep()
+    if (isValid) {
+      onNext()
+    } else {
+      // Show validation message
+      alert("Please fill in all required fields before proceeding.")
+    }
+  }
+
   return (
     <div className="flex justify-between mt-8">
       {currentStep > 0 && (
@@ -75,21 +95,25 @@ export function FormNavigation({ currentStep, totalSteps, onNext, onPrev, onSubm
       {currentStep < totalSteps - 1 ? (
         <button
           type="button"
-          onClick={onNext}
-          disabled={!canProceed()}
-          className={`ml-auto px-6 py-2 text-white rounded-md ${
-            canProceed() ? "bg-[#58317A] hover:bg-[#482968]" : "bg-gray-400 cursor-not-allowed"
-          }`}
+          onClick={handleNext}
+          className="ml-auto px-6 py-2 text-white rounded-md bg-[#58317A] hover:bg-[#482968]"
         >
           Next
         </button>
       ) : (
         <button
           type="submit"
-          disabled={!canProceed()}
-          className={`ml-auto px-6 py-2 text-white rounded-md ${
-            canProceed() ? "bg-[#58317A] hover:bg-[#482968]" : "bg-gray-400 cursor-not-allowed"
-          }`}
+          onClick={async (e) => {
+            e.preventDefault()
+            const isValid = await validateCurrentStep()
+            if (isValid) {
+              onSubmit()
+            } else {
+              // Show validation message
+              alert("Please fill in all required fields before submitting.")
+            }
+          }}
+          className="ml-auto px-6 py-2 text-white rounded-md bg-[#58317A] hover:bg-[#482968]"
         >
           Submit
         </button>

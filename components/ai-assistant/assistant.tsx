@@ -2,7 +2,19 @@
 
 import type React from "react"
 import { useState, useRef, useEffect, useCallback } from "react"
-import { X, MessageSquare, Mic, Send, Loader2, VolumeX, Phone, AlertCircle } from "lucide-react"
+import {
+  X,
+  MessageSquare,
+  Mic,
+  Send,
+  Loader2,
+  VolumeX,
+  Phone,
+  AlertCircle,
+  Maximize2,
+  Minimize2,
+  Volume2,
+} from "lucide-react"
 import { getInitialMessage, getSuggestions, getResponseForQuery } from "./assistant-knowledge"
 import { AssistantMessage } from "./assistant-message"
 import { UserMessage } from "./user-message"
@@ -33,6 +45,8 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ currentStep, stepTitle, onClo
   const [showPlayButton, setShowPlayButton] = useState(true)
   const [isRecordingState, setIsRecordingState] = useState(false)
   const [voiceSupported, setVoiceSupported] = useState(true)
+  const [isFullScreen, setIsFullScreen] = useState(true) // Default to full screen
+  const [showAudioWarning, setShowAudioWarning] = useState(false)
 
   // Fallback to text input if voice fails repeatedly
   const [voiceFailCount, setVoiceFailCount] = useState(0)
@@ -59,15 +73,27 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ currentStep, stepTitle, onClo
   }, [])
 
   useEffect(() => {
-    if (voiceFailCount >= 3 && assistantMode === "call") {
-      // After 3 failures, suggest switching to chat mode
+    if (voiceFailCount >= 2 && assistantMode === "call") {
+      // After 2 failures, suggest switching to chat mode
       setMessages((prevMessages) => [
         ...prevMessages,
         {
           role: "assistant",
-          content: "Mukhang may problema sa voice recording. Gusto mo bang lumipat sa text chat mode?",
+          content:
+            "Mukhang may problema sa voice recording. Siguraduhing binigyan mo ng permission ang browser na gamitin ang iyong mikropono. Gusto mo bang lumipat sa text chat mode?",
         },
       ])
+
+      // Add a button to switch to chat mode
+      setTimeout(() => {
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            role: "assistant",
+            content: "Maaari mong i-click ang 'Chat' button sa ibaba para magpatuloy sa text chat mode.",
+          },
+        ])
+      }, 1000)
 
       // Reset the counter
       setVoiceFailCount(0)
@@ -119,9 +145,12 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ currentStep, stepTitle, onClo
     stop: stopSpeaking,
     isSpeaking,
     isLoading: isSpeechLoading,
+    audioEnabled,
+    enableAudio,
   } = useTextToSpeech({
     onStart: () => {
       console.log("Started speaking")
+      setShowAudioWarning(false)
     },
     onEnd: () => {
       console.log("Finished speaking")
@@ -129,6 +158,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ currentStep, stepTitle, onClo
     onError: (error) => {
       console.error("Text-to-speech error:", error)
       setShowPlayButton(true)
+      setShowAudioWarning(true)
     },
   })
 
@@ -137,18 +167,6 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ currentStep, stepTitle, onClo
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
     }
   }, [messages])
-
-  // Auto-greet when call mode is activated
-  useEffect(() => {
-    if (isOpen && assistantMode === "call" && !userInteracted) {
-      // Slight delay to ensure UI is ready
-      const timer = setTimeout(() => {
-        speak(getInitialMessage())
-        setUserInteracted(true)
-      }, 500)
-      return () => clearTimeout(timer)
-    }
-  }, [isOpen, assistantMode, userInteracted, speak])
 
   const handleSendMessage = useCallback(
     async (messageContent: string = input) => {
@@ -164,13 +182,14 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ currentStep, stepTitle, onClo
           const assistantMessage = { role: "assistant", content: assistantResponse }
           setMessages((prevMessages) => [...prevMessages, assistantMessage])
 
-          // Auto-speak in call mode
-          if (assistantMode === "call") {
+          // Auto-speak in call mode - but only if audio is enabled
+          if (assistantMode === "call" && audioEnabled) {
             try {
               await speak(assistantResponse)
             } catch (error) {
               console.error("Error speaking response:", error)
               setShowPlayButton(true)
+              setShowAudioWarning(true)
             }
           }
         } catch (error) {
@@ -184,7 +203,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ currentStep, stepTitle, onClo
         }
       }
     },
-    [currentStep, speak, input, assistantMode],
+    [currentStep, speak, input, assistantMode, audioEnabled],
   )
 
   const toggleRecording = () => {
@@ -194,8 +213,29 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ currentStep, stepTitle, onClo
       setIsRecordingState(false)
     } else {
       try {
+        // Show a message to the user that we're preparing the microphone
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { role: "assistant", content: "Inaaktibo ang mikropono, pakihintay..." },
+        ])
+
         startRecording()
         setIsRecordingState(true)
+
+        // Add a timeout to check if recording started successfully
+        setTimeout(() => {
+          if (!isVoiceRecorderRecording) {
+            setMessages((prevMessages) => [
+              ...prevMessages,
+              {
+                role: "assistant",
+                content:
+                  "Hindi makapagsimula ng recording. Pakitingnan kung ang iyong browser ay may access sa mikropono.",
+              },
+            ])
+            setIsRecordingState(false)
+          }
+        }, 2000)
       } catch (error) {
         console.error("Failed to start recording:", error)
         setMessages((prevMessages) => [
@@ -205,6 +245,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ currentStep, stepTitle, onClo
             content: "Hindi makapagsimula ng recording. Pakitingnan kung ang iyong browser ay may access sa mikropono.",
           },
         ])
+        setIsRecordingState(false)
       }
     }
   }
@@ -238,7 +279,22 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ currentStep, stepTitle, onClo
       setAssistantMode(mode)
       setShowModeSelector(false)
       setIsOpen(true)
-      setUserInteracted(mode === "chat") // Only set as interacted for chat mode, call mode will auto-greet
+      setUserInteracted(true)
+
+      // If call mode, show audio enablement message
+      if (mode === "call" && !audioEnabled) {
+        setTimeout(() => {
+          setMessages((prevMessages) => [
+            ...prevMessages,
+            {
+              role: "assistant",
+              content:
+                "Para gamitin ang voice features, kailangan mong i-enable ang audio sa pamamagitan ng pag-click sa 'Enable Audio' button sa ibaba.",
+            },
+          ])
+          setShowAudioWarning(true)
+        }, 500)
+      }
     }
   }
 
@@ -257,6 +313,45 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ currentStep, stepTitle, onClo
     }
   }
 
+  const toggleFullScreen = () => {
+    setIsFullScreen(!isFullScreen)
+  }
+
+  const handlePlayAudio = (text: string) => {
+    // If audio isn't enabled yet, show the warning
+    if (!audioEnabled) {
+      setShowAudioWarning(true)
+      return
+    }
+
+    speak(text).catch((error) => {
+      console.error("Error playing audio:", error)
+      setShowAudioWarning(true)
+    })
+  }
+
+  const handleEnableAudio = () => {
+    enableAudio()
+    setShowAudioWarning(false)
+
+    // Add a message to confirm audio is enabled
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      {
+        role: "assistant",
+        content: "Salamat! Na-enable na ang audio. Maaari mo na ngayong gamitin ang voice features.",
+      },
+    ])
+
+    // Try to speak the greeting
+    setTimeout(() => {
+      speak(getInitialMessage()).catch((error) => {
+        console.error("Failed to speak greeting:", error)
+        setShowAudioWarning(true)
+      })
+    }, 500)
+  }
+
   // Pulsing animation for call button
   const pulsingClass = isVoiceRecorderRecording
     ? "animate-none bg-red-500"
@@ -267,7 +362,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ currentStep, stepTitle, onClo
       {/* Chat/Call Icon Button */}
       <button
         onClick={toggleChatIcon}
-        className="fixed bottom-4 right-4 w-14 h-14 rounded-full bg-[#58317A] text-white flex items-center justify-center shadow-lg hover:bg-[#482968] transition-colors"
+        className="fixed bottom-4 right-4 w-14 h-14 rounded-full bg-[#58317A] text-white flex items-center justify-center shadow-lg hover:bg-[#482968] transition-colors z-40"
       >
         <MessageSquare size={24} />
       </button>
@@ -312,13 +407,17 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ currentStep, stepTitle, onClo
         </div>
       )}
 
-      {/* Chat/Call Interface */}
+      {/* Chat/Call Interface - Full Screen with visible edges */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 lg:p-12">
           <div className="fixed inset-0 bg-black/50" onClick={closeChat}></div>
-          <div className="bg-white rounded-t-lg sm:rounded-lg shadow-lg w-full max-w-md h-[70vh] flex flex-col relative z-10">
+          <div
+            className={`bg-white rounded-2xl shadow-2xl flex flex-col relative z-10 w-full max-w-full h-full max-h-full overflow-hidden transition-all duration-300 ${
+              isFullScreen ? "m-4 md:m-8 lg:m-12" : "max-w-md h-[70vh]"
+            }`}
+          >
             {/* Header - Styled like the image */}
-            <div className="bg-[#58317A] text-white p-4 rounded-t-lg flex items-center justify-between">
+            <div className="bg-[#58317A] text-white p-4 rounded-t-2xl flex items-center justify-between">
               <div className="flex items-center">
                 <div className="w-12 h-12 rounded-full overflow-hidden mr-3 border-2 border-white">
                   <Image
@@ -334,15 +433,32 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ currentStep, stepTitle, onClo
                   <p className="text-sm opacity-90">PlataPay {assistantMode === "chat" ? "CSR" : "Voice Assistant"}</p>
                 </div>
               </div>
-              <button onClick={closeChat} className="p-2 hover:bg-[#482968] rounded-full">
-                <X size={24} />
-              </button>
+              <div className="flex items-center space-x-2">
+                <button onClick={toggleFullScreen} className="p-2 hover:bg-[#482968] rounded-full">
+                  {isFullScreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+                </button>
+                <button onClick={closeChat} className="p-2 hover:bg-[#482968] rounded-full">
+                  <X size={24} />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 p-4 overflow-y-auto" ref={chatContainerRef} style={{ scrollBehavior: "smooth" }}>
+              {/* Audio warning banner */}
+              {showAudioWarning && (
+                <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-md mb-4 text-sm flex items-center">
+                  <AlertCircle size={16} className="mr-2 flex-shrink-0" />
+                  <span>
+                    Audio playback requires permission. Please click the "Enable Audio" button below to activate voice
+                    features.
+                  </span>
+                </div>
+              )}
+
               {assistantMode === "call" && (
                 <div className="bg-[#58317A]/10 border border-[#58317A]/20 text-[#58317A] px-4 py-2 rounded-md mb-4 text-sm">
                   Voice mode active. {isVoiceRecorderRecording ? "Listening..." : "Click the microphone to speak."}
+                  {!audioEnabled && " Audio is currently disabled. Please enable audio to use voice features."}
                 </div>
               )}
 
@@ -353,8 +469,8 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ currentStep, stepTitle, onClo
                   <AssistantMessage
                     key={index}
                     content={message.content}
-                    onPlayAudio={() => speak(message.content)}
-                    showPlayButton={index === 0 ? showPlayButton : true}
+                    onPlayAudio={() => handlePlayAudio(message.content)}
+                    showPlayButton={audioEnabled}
                   />
                 ),
               )}
@@ -405,44 +521,76 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ currentStep, stepTitle, onClo
                   </button>
                 )}
 
-                {/* Show mic button in both modes, but make it more prominent in call mode */}
-                <button
-                  onClick={toggleRecording}
-                  disabled={isThinking || !voiceSupported}
-                  className={`${
-                    assistantMode === "call" ? "flex-1 py-3" : "ml-2 w-10 h-10"
-                  } rounded-full flex items-center justify-center disabled:opacity-50 ${
-                    !voiceSupported
-                      ? "bg-gray-300 text-gray-500"
-                      : assistantMode === "call"
-                        ? isVoiceRecorderRecording
-                          ? "bg-red-500 text-white"
-                          : `bg-[#58317A] text-white ${pulsingClass}`
-                        : ""
-                  }`}
-                >
-                  {isVoiceProcessing ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <>
-                      <Mic
-                        size={assistantMode === "call" ? 24 : 20}
-                        className={`${
-                          !voiceSupported
-                            ? "text-gray-500"
-                            : isVoiceRecorderRecording || assistantMode === "call"
-                              ? "text-white"
-                              : "text-[#58317A]"
-                        }`}
-                      />
-                      {assistantMode === "call" && (
-                        <span className="ml-2 font-medium">
-                          {isVoiceRecorderRecording ? "Listening..." : "Tap to speak"}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </button>
+                {/* Show mic button in call mode */}
+                {assistantMode === "call" && (
+                  <button
+                    onClick={toggleRecording}
+                    disabled={isThinking || !voiceSupported}
+                    className={`${
+                      assistantMode === "call" ? "flex-1 py-3" : "ml-2 w-10 h-10"
+                    } rounded-full flex items-center justify-center disabled:opacity-50 ${
+                      !voiceSupported
+                        ? "bg-gray-300 text-gray-500"
+                        : assistantMode === "call"
+                          ? isVoiceRecorderRecording
+                            ? "bg-red-500 text-white"
+                            : `bg-[#58317A] text-white ${pulsingClass}`
+                          : ""
+                    }`}
+                  >
+                    {isVoiceProcessing ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Mic
+                          size={assistantMode === "call" ? 24 : 20}
+                          className={`${
+                            !voiceSupported
+                              ? "text-gray-500"
+                              : isVoiceRecorderRecording || assistantMode === "call"
+                                ? "text-white"
+                                : "text-[#58317A]"
+                          }`}
+                        />
+                        {assistantMode === "call" && (
+                          <span className="ml-2 font-medium">
+                            {isVoiceRecorderRecording ? "Listening..." : "Tap to speak"}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </button>
+                )}
+
+                {/* Enable audio button - always show in call mode if audio isn't enabled */}
+                {assistantMode === "call" && !audioEnabled && (
+                  <button
+                    onClick={handleEnableAudio}
+                    className="ml-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
+                  >
+                    <Volume2 size={16} className="mr-1" />
+                    <span>Enable Audio</span>
+                  </button>
+                )}
+
+                {assistantMode === "call" && (
+                  <button
+                    onClick={() => {
+                      setAssistantMode("chat")
+                      setMessages((prevMessages) => [
+                        ...prevMessages,
+                        {
+                          role: "assistant",
+                          content: "Lumipat sa text chat mode. Maaari ka nang mag-type ng iyong mensahe.",
+                        },
+                      ])
+                    }}
+                    className="ml-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                  >
+                    <MessageSquare size={16} className="inline-block mr-1" />
+                    <span>Chat</span>
+                  </button>
+                )}
 
                 {/* Stop speaking button */}
                 {isSpeaking && (

@@ -1,21 +1,136 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { useFormContext } from "react-hook-form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  getRegions,
+  getProvincesByRegion,
+  getCitiesByProvince,
+  getMunicipalitiesByProvince,
+  getBarangaysByCity,
+  getBarangaysByMunicipality,
+  type Region,
+  type Province,
+  type City,
+  type Municipality,
+  type Barangay,
+} from "@/services/philippines-location-service"
 
 export function PersonalInfo() {
   const { register, watch, setValue } = useFormContext()
+  const [regions, setRegions] = useState<Region[]>([])
+  const [provinces, setProvinces] = useState<Province[]>([])
+  const [cities, setCities] = useState<City[]>([])
+  const [municipalities, setMunicipalities] = useState<Municipality[]>([])
+  const [barangays, setBarangays] = useState<Barangay[]>([])
+  const [loading, setLoading] = useState({
+    regions: false,
+    provinces: false,
+    cities: false,
+    municipalities: false,
+    barangays: false,
+  })
+  const [locationType, setLocationType] = useState<"city" | "municipality">("city")
 
   const everCharged = watch("everCharged")
   const declaredBankruptcy = watch("declaredBankruptcy")
   const firstTimeApplying = watch("firstTimeApplying")
   const incomeSource = watch("incomeSource")
+  const region = watch("address.region")
+  const province = watch("address.province")
+  const city = watch("address.city")
+  const municipality = watch("address.municipality")
 
   const needsDetails = everCharged === "yes" || declaredBankruptcy === "yes" || firstTimeApplying === "no"
+
+  // Fetch regions on component mount
+  useEffect(() => {
+    const fetchRegions = async () => {
+      setLoading((prev) => ({ ...prev, regions: true }))
+      const data = await getRegions()
+      setRegions(data)
+      setLoading((prev) => ({ ...prev, regions: false }))
+    }
+
+    fetchRegions()
+  }, [])
+
+  // Update provinces when region changes
+  useEffect(() => {
+    if (region) {
+      const fetchProvinces = async () => {
+        setLoading((prev) => ({ ...prev, provinces: true }))
+        const data = await getProvincesByRegion(region)
+        setProvinces(data)
+        setLoading((prev) => ({ ...prev, provinces: false }))
+      }
+
+      fetchProvinces()
+      setValue("address.province", "")
+      setCities([])
+      setMunicipalities([])
+      setBarangays([])
+    } else {
+      setProvinces([])
+    }
+  }, [region, setValue])
+
+  // Update cities and municipalities when province changes
+  useEffect(() => {
+    if (province) {
+      const fetchCities = async () => {
+        setLoading((prev) => ({ ...prev, cities: true }))
+        const citiesData = await getCitiesByProvince(province)
+        setCities(citiesData)
+        setLoading((prev) => ({ ...prev, cities: false }))
+      }
+
+      const fetchMunicipalities = async () => {
+        setLoading((prev) => ({ ...prev, municipalities: true }))
+        const municipalitiesData = await getMunicipalitiesByProvince(province)
+        setMunicipalities(municipalitiesData)
+        setLoading((prev) => ({ ...prev, municipalities: false }))
+      }
+
+      fetchCities()
+      fetchMunicipalities()
+      setValue("address.city", "")
+      setValue("address.municipality", "")
+      setBarangays([])
+    } else {
+      setCities([])
+      setMunicipalities([])
+    }
+  }, [province, setValue])
+
+  // Update barangays when city or municipality changes
+  useEffect(() => {
+    const fetchBarangays = async () => {
+      setLoading((prev) => ({ ...prev, barangays: true }))
+      let data: Barangay[] = []
+
+      if (locationType === "city" && city) {
+        data = await getBarangaysByCity(city)
+      } else if (locationType === "municipality" && municipality) {
+        data = await getBarangaysByMunicipality(municipality)
+      }
+
+      setBarangays(data)
+      setLoading((prev) => ({ ...prev, barangays: false }))
+    }
+
+    if ((locationType === "city" && city) || (locationType === "municipality" && municipality)) {
+      fetchBarangays()
+      setValue("address.brgy", "")
+    } else {
+      setBarangays([])
+    }
+  }, [city, municipality, locationType, setValue])
 
   return (
     <div className="space-y-8">
@@ -157,18 +272,153 @@ export function PersonalInfo() {
 
       <div className="space-y-2">
         <Label>Home Address</Label>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input placeholder="No." {...register("address.number")} />
+          <div className="space-y-2">
+            <Label htmlFor="region">
+              Region <span className="text-red-500">*</span>
+            </Label>
+            <Select onValueChange={(value) => setValue("address.region", value)} disabled={loading.regions}>
+              <SelectTrigger>
+                <SelectValue placeholder={loading.regions ? "Loading regions..." : "Select Region"} />
+              </SelectTrigger>
+              <SelectContent>
+                {regions.map((region) => (
+                  <SelectItem key={region.code} value={region.code}>
+                    {region.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="province">
+              Province <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              onValueChange={(value) => setValue("address.province", value)}
+              disabled={provinces.length === 0 || loading.provinces}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={loading.provinces ? "Loading provinces..." : "Select Province"} />
+              </SelectTrigger>
+              <SelectContent>
+                {provinces.map((province) => (
+                  <SelectItem key={province.code} value={province.code}>
+                    {province.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-2 mt-2">
+          <Label>
+            City/Municipality Type <span className="text-red-500">*</span>
+          </Label>
+          <div className="flex space-x-4">
+            <label className="flex items-center space-x-2">
+              <input
+                type="radio"
+                name="homeLocationType"
+                value="city"
+                checked={locationType === "city"}
+                onChange={() => setLocationType("city")}
+                className="h-4 w-4 text-[#58317A]"
+              />
+              <span>City</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="radio"
+                name="homeLocationType"
+                value="municipality"
+                checked={locationType === "municipality"}
+                onChange={() => setLocationType("municipality")}
+                className="h-4 w-4 text-[#58317A]"
+              />
+              <span>Municipality</span>
+            </label>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+          {locationType === "city" ? (
+            <div className="space-y-2">
+              <Label htmlFor="city">
+                City <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                onValueChange={(value) => setValue("address.city", value)}
+                disabled={cities.length === 0 || loading.cities}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={loading.cities ? "Loading cities..." : "Select City"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {cities.map((city) => (
+                    <SelectItem key={city.code} value={city.code}>
+                      {city.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="municipality">
+                Municipality <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                onValueChange={(value) => setValue("address.municipality", value)}
+                disabled={municipalities.length === 0 || loading.municipalities}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={loading.municipalities ? "Loading municipalities..." : "Select Municipality"}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {municipalities.map((municipality) => (
+                    <SelectItem key={municipality.code} value={municipality.code}>
+                      {municipality.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="barangay">
+              Barangay <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              onValueChange={(value) => setValue("address.brgy", value)}
+              disabled={barangays.length === 0 || loading.barangays}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={loading.barangays ? "Loading barangays..." : "Select Barangay"} />
+              </SelectTrigger>
+              <SelectContent>
+                {barangays.map((barangay) => (
+                  <SelectItem key={barangay.code} value={barangay.code}>
+                    {barangay.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
           <Input placeholder="Street" {...register("address.street")} />
+          <Input placeholder="No." {...register("address.number")} />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-          <Input placeholder="Barangay" {...register("address.brgy")} />
-          <Input placeholder="City" {...register("address.city")} />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-          <Input placeholder="Region" {...register("address.region")} />
-          <Input placeholder="Zip Code" {...register("address.zipCode")} />
-        </div>
+
+        <Input placeholder="Zip Code" {...register("address.zipCode")} className="mt-2" />
         <Input placeholder="Country" defaultValue="Philippines" {...register("address.country")} className="mt-2" />
       </div>
 

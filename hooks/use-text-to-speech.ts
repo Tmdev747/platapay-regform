@@ -11,11 +11,47 @@ interface UseTextToSpeechProps {
 export function useTextToSpeech({ onStart, onEnd, onError }: UseTextToSpeechProps = {}) {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [audioEnabled, setAudioEnabled] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  // Function to enable audio - must be called from a user interaction handler
+  const enableAudio = useCallback(() => {
+    // Create and play a silent audio to unlock audio capabilities
+    try {
+      const audio = new Audio()
+      audio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA"
+
+      // Play and immediately pause to unlock audio
+      const playPromise = audio.play()
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            audio.pause()
+            setAudioEnabled(true)
+            console.log("Audio enabled successfully")
+          })
+          .catch((error) => {
+            console.error("Failed to enable audio:", error)
+            if (onError) onError(new Error("Could not enable audio. Please check browser permissions."))
+          })
+      }
+    } catch (error) {
+      console.error("Error enabling audio:", error)
+      if (onError && error instanceof Error) {
+        onError(error)
+      }
+    }
+  }, [onError])
 
   const speak = useCallback(
     async (text: string) => {
       if (!text) return
+
+      // If audio isn't enabled yet, don't even try to play
+      if (!audioEnabled) {
+        if (onError) onError(new Error("Audio is not enabled. Please enable audio first."))
+        return
+      }
 
       try {
         setIsLoading(true)
@@ -73,19 +109,37 @@ export function useTextToSpeech({ onStart, onEnd, onError }: UseTextToSpeechProp
           audioRef.current = null
         }
 
-        // Play the audio
-        await audio.play()
+        // Try to play the audio with error handling
+        try {
+          const playPromise = audio.play()
+
+          // Modern browsers return a promise from play()
+          if (playPromise !== undefined) {
+            playPromise.catch((error) => {
+              console.error("Audio playback blocked:", error)
+              if (onError) onError(new Error("Audio playback blocked by browser. Please enable audio first."))
+              // Clean up
+              URL.revokeObjectURL(audioUrl)
+              audioRef.current = null
+            })
+          }
+        } catch (playError) {
+          console.error("Error playing audio:", playError)
+          if (onError) onError(new Error("Failed to play audio. Browser may be blocking autoplay."))
+          // Clean up
+          URL.revokeObjectURL(audioUrl)
+          audioRef.current = null
+        }
       } catch (error) {
         console.error("Error generating speech:", error)
         if (onError && error instanceof Error) {
           onError(error)
         }
-        throw error
       } finally {
         setIsLoading(false)
       }
     },
-    [onStart, onEnd, onError],
+    [onStart, onEnd, onError, audioEnabled],
   )
 
   const stop = useCallback(() => {
@@ -102,5 +156,7 @@ export function useTextToSpeech({ onStart, onEnd, onError }: UseTextToSpeechProp
     stop,
     isSpeaking,
     isLoading,
+    audioEnabled,
+    enableAudio,
   }
 }
