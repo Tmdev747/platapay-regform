@@ -1,9 +1,5 @@
-import ApplicationForm from "@/components/application-form"
+import { LandingPage } from "@/components/landing-page"
 
-export default function Home() {
-  return (
-    <main className="min-h-screen bg-gradient-to-b from-[#8A63AC] to-[#58317A]">
-      <ApplicationForm />
-    </main>
-  )
+export default function HomePage() {
+  return <LandingPage />
 }

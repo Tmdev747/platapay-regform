@@ -1,28 +1,12 @@
-import Image from "next/image"
+import Link from "next/link"
 
-export function Logo({ size = "default" }: { size?: "small" | "default" | "large" }) {
-  const sizes = {
-    small: { width: 32, height: 32 },
-    default: { width: 48, height: 48 },
-    large: { width: 64, height: 64 },
-  }
-
-  const { width, height } = sizes[size] || sizes.default
-
+export function Logo() {
   return (
-    <div className="flex items-center">
-      <div className="flex-shrink-0 mr-2">
-        <Image
-          src="/images/platapay-logo.png"
-          alt="PlataPay Logo"
-          width={width}
-          height={height}
-          className="object-contain"
-        />
-      </div>
-      <span className={`font-bold ${size === "large" ? "text-2xl" : size === "small" ? "text-base" : "text-xl"}`}>
-        PlataPay
+    <Link href="/" className="flex items-center space-x-2">
+      <span className="font-bold text-primary text-xl">PlataPay</span>
+      <span className="rounded-md bg-primary px-1.5 py-0.5 text-xs font-medium text-primary-foreground">
+        Agent Portal
       </span>
-    </div>
+    </Link>
   )
 }
