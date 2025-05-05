@@ -29,6 +29,39 @@ export const createBrowserClient = () => {
     throw new Error("Supabase configuration is missing. Please check your environment variables.")
   }
 
-  browserClient = createClient<Database>(supabaseUrl, supabaseKey)
+  browserClient = createClient<Database>(supabaseUrl, supabaseKey, {
+    auth: {
+      flowType: "pkce",
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      storageKey: "platapay-auth-token",
+      storage: {
+        getItem: (key) => {
+          try {
+            return localStorage.getItem(key)
+          } catch (error) {
+            // Fallback for private browsing
+            console.error("Error accessing localStorage:", error)
+            return null
+          }
+        },
+        setItem: (key, value) => {
+          try {
+            localStorage.setItem(key, value)
+          } catch (error) {
+            console.error("Error setting localStorage:", error)
+          }
+        },
+        removeItem: (key) => {
+          try {
+            localStorage.removeItem(key)
+          } catch (error) {
+            console.error("Error removing from localStorage:", error)
+          }
+        },
+      },
+    },
+  })
   return browserClient
 }

@@ -58,6 +58,8 @@ export function InitialRegistrationModal({ open, onOpenChange, onSuccess }: Init
             full_name: data.fullName,
             registration_status: "started",
           },
+          // Use a relative URL to avoid cross-window issues
+          emailRedirectTo: `/auth/confirm`,
         },
       })
 

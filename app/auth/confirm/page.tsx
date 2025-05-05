@@ -80,6 +80,7 @@ export default function ConfirmPage() {
       // Validate passwords
       if (password !== confirmPassword) {
         setPasswordError("Passwords do not match")
+        setIsSettingPassword(false)
         return
       }
 
@@ -89,6 +90,7 @@ export default function ConfirmPage() {
       } catch (error) {
         if (error instanceof z.ZodError) {
           setPasswordError(error.errors[0].message)
+          setIsSettingPassword(false)
           return
         }
       }
@@ -102,11 +104,12 @@ export default function ConfirmPage() {
 
       toast({
         title: "Password Set Successfully",
-        description: "You can now continue with your agent registration.",
+        description: "You can now sign in with your email and password.",
       })
 
-      // Redirect to the registration form
-      router.push("/register/agent-details")
+      // Use window.location for a full page navigation instead of router.push
+      // This helps avoid issues with multiple windows
+      window.location.href = "/auth/success"
     } catch (error) {
       console.error("Error setting password:", error)
       toast({
@@ -114,7 +117,6 @@ export default function ConfirmPage() {
         description: error instanceof Error ? error.message : "Failed to set password. Please try again.",
         variant: "destructive",
       })
-    } finally {
       setIsSettingPassword(false)
     }
   }
@@ -138,7 +140,13 @@ export default function ConfirmPage() {
               <p className="text-muted-foreground">
                 The verification link is invalid or has expired. Please request a new verification link.
               </p>
-              <Button onClick={() => router.push("/register")} className="mt-4">
+              <Button
+                onClick={() => {
+                  // Use window.location for a full page navigation
+                  window.location.href = "/register"
+                }}
+                className="mt-4"
+              >
                 Back to Registration
               </Button>
             </div>

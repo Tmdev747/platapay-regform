@@ -25,6 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createBrowserClient()
 
   useEffect(() => {
+    // Use a more resilient approach to session management
     const getSession = async () => {
       try {
         const {
@@ -47,9 +48,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     getSession()
 
+    // Use a more stable approach to auth state changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Don't force navigation or reload on auth state change
       setSession(session)
       setUser(session?.user ?? null)
       setIsLoading(false)
@@ -90,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true)
     try {
       const { error } = await supabase.auth.resend({
-        type: 'signup',
+        type: "signup",
         email,
       })
       return { error }
@@ -105,7 +108,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     setIsLoading(true)
     try {
-      const { error } = await supabase.auth.signOut()
+      // Use a more stable approach to sign out
+      const { error } = await supabase.auth.signOut({ scope: "local" }) // Only sign out current tab
       if (error) throw error
     } catch (err) {
       console.error("Error signing out:", err)
@@ -115,15 +119,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      session, 
-      isLoading, 
-      signIn, 
-      signUp, 
-      signOut,
-      resendConfirmationEmail 
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        isLoading,
+        signIn,
+        signUp,
+        signOut,
+        resendConfirmationEmail,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )
