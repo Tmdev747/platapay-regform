@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Complete Your Application - PlataPay</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      color: #333333;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      background-color: #58317A;
+      padding: 20px;
+      text-align: center;
+      border-radius: 5px 5px 0 0;
+    }
+    .header img {
+      max-height: 60px;
+    }
+    .content {
+      background-color: #ffffff;
+      padding: 30px;
+      border-left: 1px solid #dddddd;
+      border-right: 1px solid #dddddd;
+    }
+    .footer {
+      background-color: #f7f7f7;
+      padding: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: #666666;
+      border-radius: 0 0 5px 5px;
+      border: 1px solid #dddddd;
+      border-top: none;
+    }
+    .button {
+      display: inline-block;
+      background-color: #58317A;
+      color: #ffffff !important;
+      text-decoration: none;
+      padding: 12px 30px;
+      border-radius: 4px;
+      font-weight: bold;
+      margin: 20px 0;
+    }
+    .button:hover {
+      background-color: #482968;
+    }
+    h1 {
+      color: #58317A;
+      margin-top: 0;
+    }
+    .progress-container {
+      background-color: #f9f9f9;
+      padding: 15px;
+      border-radius: 4px;
+      margin: 20px 0;
+    }
+    .progress-bar {
+      background-color: #e0e0e0;
+      height: 20px;
+      border-radius: 10px;
+      margin: 10px 0;
+      overflow: hidden;
+    }
+    .progress-fill {
+      background-color: #58317A;
+      height: 100%;
+      width: {{progressPercentage}}%;
+    }
+    .highlight {
+      color: #58317A;
+      font-weight: bold;
+    }
+    .expiry-warning {
+      background-color: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 10px 15px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="https://platapay.ph/logo-white.png" alt="PlataPay Logo">
+    </div>
+    <div class="content">
+      <h1>Complete Your PlataPay Agent Application</h1>
+      <p>Hello {{fullName}},</p>
+      <p>We noticed that you started your PlataPay Agent application but haven't completed it yet. Your application is currently saved and waiting for you to finish.</p>
+      
+      <div class="progress-container">
+        <p><strong>Application Progress:</strong></p>
+        <div class="progress-bar">
+          <div class="progress-fill"></div>
+        </div>
+        <p>You've completed <span class="highlight">{{progressPercentage}}%</span> of your application.</p>
+        <p>Current step: <span class="highlight">{{currentStep}}</span></p>
+      </div>
+      
+      {{#if expiryDate}}
+      <div class="expiry-warning">
+        <p><strong>Important:</strong> Your incomplete application will expire on <span class="highlight">{{expiryDate}}</span>. Please complete it before this date to avoid starting over.</p>
+      </div>
+      {{/if}}
+      
+      <p>To continue where you left off, simply click the button below:</p>
+      
+      <div style="text-align: center;">
+        <a href="{{continueLink}}" class="button">Continue Application</a>
+      </div>
+      
+      <p>Becoming a PlataPay Agent offers numerous benefits:</p>
+      <ul>
+        <li>Additional income through transaction commissions</li>
+        <li>Increased foot traffic for your existing business</li>
+        <li>Low startup costs compared to other business opportunities</li>
+        <li>Comprehensive training and support</li>
+      </ul>
+      
+      <p>If you're experiencing any difficulties with your application or have questions, our support team is ready to assist you at <a href="mailto:support@platapay.ph">support@platapay.ph</a>.</p>
+    </div>
+    <div class="footer">
+      <p>&copy; {{year}} PlataPay, a subsidiary of InnovateHub. All rights reserved.</p>
+      <p>This is an automated message, please do not reply to this email.</p>
+    </div>
+  </div>
+</body>
+</html>

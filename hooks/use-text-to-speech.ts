@@ -1,144 +1,155 @@
 "use client"
 
-import { useState, useRef, useCallback, useEffect } from "react"
+import { useState, useRef, useCallback } from "react"
 
-interface UseTextToSpeechOptions {
+interface UseTextToSpeechProps {
   onStart?: () => void
   onEnd?: () => void
   onError?: (error: Error) => void
-  defaultVoiceId?: string
 }
 
-export function useTextToSpeech({ onStart, onEnd, onError, defaultVoiceId }: UseTextToSpeechOptions = {}) {
+export function useTextToSpeech({ onStart, onEnd, onError }: UseTextToSpeechProps = {}) {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [audioEnabled, setAudioEnabled] = useState(false)
-  const [currentVoiceId, setCurrentVoiceId] = useState(defaultVoiceId)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  const audioContext = useRef<AudioContext | null>(null)
-  const audioQueue = useRef<string[]>([])
-  const isSpeakingRef = useRef(false)
-
-  // Initialize audio context
-  const initializeAudio = useCallback(async () => {
+  // Function to enable audio - must be called from a user interaction handler
+  const enableAudio = useCallback(() => {
+    // Create and play a silent audio to unlock audio capabilities
     try {
-      if (!audioContext.current) {
-        audioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)()
-      }
+      const audio = new Audio()
+      audio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA"
 
-      if (audioContext.current.state === "suspended") {
-        await audioContext.current.resume()
+      // Play and immediately pause to unlock audio
+      const playPromise = audio.play()
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            audio.pause()
+            setAudioEnabled(true)
+            console.log("Audio enabled successfully")
+          })
+          .catch((error) => {
+            console.error("Failed to enable audio:", error)
+            if (onError) onError(new Error("Could not enable audio. Please check browser permissions."))
+          })
       }
-
-      setAudioEnabled(true)
-      return true
-    } catch (err) {
-      console.error("Failed to initialize audio:", err)
-      onError?.(err instanceof Error ? err : new Error("Failed to enable audio"))
-      setAudioEnabled(false)
-      return false
+    } catch (error) {
+      console.error("Error enabling audio:", error)
+      if (onError && error instanceof Error) {
+        onError(error)
+      }
     }
   }, [onError])
 
-  // Process text to speech
   const speak = useCallback(
-    async (text: string, voiceId?: string) => {
-      if (!audioEnabled) {
-        audioQueue.current.push(text)
-        const success = await initializeAudio()
-        if (!success) return
-      }
+    async (text: string) => {
+      if (!text) return
 
-      if (isSpeakingRef.current) {
-        audioQueue.current.push(text)
+      // If audio isn't enabled yet, don't even try to play
+      if (!audioEnabled) {
+        if (onError) onError(new Error("Audio is not enabled. Please enable audio first."))
         return
       }
 
-      const processQueue = async () => {
-        if (audioQueue.current.length === 0) {
-          isSpeakingRef.current = false
-          setIsSpeaking(false)
-          return
-        }
-
-        const nextText = audioQueue.current.shift()
-        if (!nextText) {
-          isSpeakingRef.current = false
-          setIsSpeaking(false)
-          return
-        }
-
-        isSpeakingRef.current = true
-        setIsSpeaking(true)
+      try {
         setIsLoading(true)
-        onStart?.()
 
-        try {
-          const response = await fetch("/api/text-to-speech", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              text: nextText,
-              voiceId: voiceId || currentVoiceId,
-            }),
-          })
-
-          if (!response.ok) {
-            throw new Error("Failed to convert text to speech")
-          }
-
-          const audioBlob = await response.blob()
-          const audioUrl = URL.createObjectURL(audioBlob)
-          const audio = new Audio(audioUrl)
-
-          audio.onended = () => {
-            URL.revokeObjectURL(audioUrl)
-            processQueue()
-          }
-
-          setIsLoading(false)
-          await audio.play()
-        } catch (err) {
-          console.error("Error in text-to-speech:", err)
-          onError?.(err instanceof Error ? err : new Error("Failed to play audio"))
-          setIsLoading(false)
-          isSpeakingRef.current = false
-          setIsSpeaking(false)
-          processQueue()
+        // Stop any currently playing audio
+        if (audioRef.current) {
+          audioRef.current.pause()
+          audioRef.current = null
         }
-      }
 
-      if (!isSpeakingRef.current) {
-        audioQueue.current.push(text)
-        await processQueue()
+        // Call the text-to-speech API
+        const response = await fetch("/api/text-to-speech", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ text }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+          throw new Error(errorData.error || "Failed to generate speech")
+        }
+
+        // Get the audio blob
+        const audioBlob = await response.blob()
+
+        // Create an object URL for the audio blob
+        const audioUrl = URL.createObjectURL(audioBlob)
+
+        // Create an audio element
+        const audio = new Audio(audioUrl)
+        audioRef.current = audio
+
+        // Set up event handlers
+        audio.onplay = () => {
+          setIsSpeaking(true)
+          if (onStart) onStart()
+        }
+
+        audio.onended = () => {
+          setIsSpeaking(false)
+          if (onEnd) onEnd()
+          // Clean up the object URL
+          URL.revokeObjectURL(audioUrl)
+          audioRef.current = null
+        }
+
+        audio.onerror = (event) => {
+          console.error("Audio playback error:", event)
+          setIsSpeaking(false)
+          if (onError) onError(new Error("Error playing audio"))
+          // Clean up the object URL
+          URL.revokeObjectURL(audioUrl)
+          audioRef.current = null
+        }
+
+        // Try to play the audio with error handling
+        try {
+          const playPromise = audio.play()
+
+          // Modern browsers return a promise from play()
+          if (playPromise !== undefined) {
+            playPromise.catch((error) => {
+              console.error("Audio playback blocked:", error)
+              if (onError) onError(new Error("Audio playback blocked by browser. Please enable audio first."))
+              // Clean up
+              URL.revokeObjectURL(audioUrl)
+              audioRef.current = null
+            })
+          }
+        } catch (playError) {
+          console.error("Error playing audio:", playError)
+          if (onError) onError(new Error("Failed to play audio. Browser may be blocking autoplay."))
+          // Clean up
+          URL.revokeObjectURL(audioUrl)
+          audioRef.current = null
+        }
+      } catch (error) {
+        console.error("Error generating speech:", error)
+        if (onError && error instanceof Error) {
+          onError(error)
+        }
+      } finally {
+        setIsLoading(false)
       }
     },
-    [audioEnabled, initializeAudio, onStart, onError, currentVoiceId],
+    [onStart, onEnd, onError, audioEnabled],
   )
 
-  // Stop speaking
   const stop = useCallback(() => {
-    audioQueue.current = []
-    isSpeakingRef.current = false
-    setIsSpeaking(false)
-    onEnd?.()
-  }, [onEnd])
-
-  // Set voice
-  const setVoice = useCallback((voiceId: string) => {
-    setCurrentVoiceId(voiceId)
-  }, [])
-
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      if (audioContext.current && audioContext.current.state !== "closed") {
-        audioContext.current.close()
-      }
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current = null
+      setIsSpeaking(false)
+      if (onEnd) onEnd()
     }
-  }, [])
+  }, [onEnd])
 
   return {
     speak,
@@ -146,8 +157,6 @@ export function useTextToSpeech({ onStart, onEnd, onError, defaultVoiceId }: Use
     isSpeaking,
     isLoading,
     audioEnabled,
-    initializeAudio,
-    setVoice,
-    currentVoiceId,
+    enableAudio,
   }
 }

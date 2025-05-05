@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Application Status Update - PlataPay</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      color: #333333;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      background-color: #58317A;
+      padding: 20px;
+      text-align: center;
+      border-radius: 5px 5px 0 0;
+    }
+    .header img {
+      max-height: 60px;
+    }
+    .content {
+      background-color: #ffffff;
+      padding: 30px;
+      border-left: 1px solid #dddddd;
+      border-right: 1px solid #dddddd;
+    }
+    .footer {
+      background-color: #f7f7f7;
+      padding: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: #666666;
+      border-radius: 0 0 5px 5px;
+      border: 1px solid #dddddd;
+      border-top: none;
+    }
+    .button {
+      display: inline-block;
+      background-color: #58317A;
+      color: #ffffff !important;
+      text-decoration: none;
+      padding: 12px 30px;
+      border-radius: 4px;
+      font-weight: bold;
+      margin: 20px 0;
+    }
+    .button:hover {
+      background-color: #482968;
+    }
+    h1 {
+      color: #58317A;
+      margin-top: 0;
+    }
+    .application-details {
+      background-color: #f9f9f9;
+      padding: 15px;
+      border-radius: 4px;
+      margin: 20px 0;
+    }
+    .highlight {
+      color: #58317A;
+      font-weight: bold;
+    }
+    .status {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 14px;
+      color: white;
+    }
+    .status-approved {
+      background-color: #28a745;
+    }
+    .status-rejected {
+      background-color: #dc3545;
+    }
+    .status-pending {
+      background-color: #ffc107;
+      color: #212529;
+    }
+    .status-review {
+      background-color: #58317A;
+    }
+    .next-steps {
+      border-left: 4px solid #58317A;
+      padding-left: 15px;
+      margin: 20px 0;
+    }
+    .feedback {
+      background-color: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 4px;
+      padding: 15px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="https://platapay.ph/logo-white.png" alt="PlataPay Logo">
+    </div>
+    <div class="content">
+      <h1>Application Status Update</h1>
+      <p>Hello {{fullName}},</p>
+      
+      <p>There has been an update to your PlataPay Agent application.</p>
+      
+      <div class="application-details">
+        <p><strong>Application Details:</strong></p>
+        <p>Application ID: <span class="highlight">{{applicationId}}</span></p>
+        <p>Email: <span class="highlight">{{email}}</span></p>
+        <p>Submission Date: <span class="highlight">{{submissionDate}}</span></p>
+        <p>Status: <span class="status status-{{statusClass}}">{{status}}</span></p>
+        <p>Last Updated: <span class="highlight">{{updateDate}}</span></p>
+      </div>
+      
+      {{#if feedback}}
+      <div class="feedback">
+        <h3>Feedback from our team:</h3>
+        <p>{{feedback}}</p>
+      </div>
+      {{/if}}
+      
+      <div class="next-steps">
+        <h3>Next Steps:</h3>
+        {{#if isApproved}}
+        <ol>
+          <li>Complete the onboarding process by clicking the button below</li>
+          <li>Set up your PlataPay Agent account</li>
+          <li>Attend the scheduled training session</li>
+          <li>Start accepting transactions!</li>
+        </ol>
+        {{else if isRejected}}
+        <p>Unfortunately, your application has not been approved at this time. You may reapply after 3 months with the suggested improvements.</p>
+        {{else if needsMoreInfo}}
+        <ol>
+          <li>Review the feedback provided by our team</li>
+          <li>Update your application with the requested information</li>
+          <li>Resubmit your application for review</li>
+        </ol>
+        {{else}}
+        <p>Your application is still being processed. We'll notify you of any updates.</p>
+        {{/if}}
+      </div>
+      
+      <div style="text-align: center;">
+        {{#if isApproved}}
+        <a href="{{onboardingLink}}" class="button">Begin Onboarding</a>
+        {{else if needsMoreInfo}}
+        <a href="{{updateLink}}" class="button">Update Application</a>
+        {{else}}
+        <a href="{{statusLink}}" class="button">View Application Status</a>
+        {{/if}}
+      </div>
+      
+      <p>If you have any questions or need assistance, please contact our support team at <a href="mailto:support@platapay.ph">support@platapay.ph</a>.</p>
+    </div>
+    <div class="footer">
+      <p>&copy; {{year}} PlataPay, a subsidiary of InnovateHub. All rights reserved.</p>
+      <p>This is an automated message, please do not reply to this email.</p>
+    </div>
+  </div>
+</body>
+</html>

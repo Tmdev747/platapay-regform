@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to PlataPay - Onboarding Information</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      color: #333333;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      background-color: #58317A;
+      padding: 20px;
+      text-align: center;
+      border-radius: 5px 5px 0 0;
+    }
+    .header img {
+      max-height: 60px;
+    }
+    .content {
+      background-color: #ffffff;
+      padding: 30px;
+      border-left: 1px solid #dddddd;
+      border-right: 1px solid #dddddd;
+    }
+    .footer {
+      background-color: #f7f7f7;
+      padding: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: #666666;
+      border-radius: 0 0 5px 5px;
+      border: 1px solid #dddddd;
+      border-top: none;
+    }
+    .button {
+      display: inline-block;
+      background-color: #58317A;
+      color: #ffffff !important;
+      text-decoration: none;
+      padding: 12px 30px;
+      border-radius: 4px;
+      font-weight: bold;
+      margin: 20px 0;
+    }
+    .button:hover {
+      background-color: #482968;
+    }
+    h1 {
+      color: #58317A;
+      margin-top: 0;
+    }
+    .account-details {
+      background-color: #f9f9f9;
+      padding: 15px;
+      border-radius: 4px;
+      margin: 20px 0;
+    }
+    .highlight {
+      color: #58317A;
+      font-weight: bold;
+    }
+    .training-schedule {
+      border: 1px solid #dddddd;
+      border-radius: 4px;
+      padding: 15px;
+      margin: 20px 0;
+    }
+    .checklist {
+      background-color: #f0f0f0;
+      padding: 15px;
+      border-radius: 4px;
+      margin: 20px 0;
+    }
+    .checklist ul {
+      padding-left: 20px;
+    }
+    .checklist li {
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="https://platapay.ph/logo-white.png" alt="PlataPay Logo">
+    </div>
+    <div class="content">
+      <h1>Welcome to the PlataPay Family!</h1>
+      <p>Hello {{fullName}},</p>
+      <p>Congratulations! Your application to become a PlataPay Agent has been approved. We're excited to welcome you to our growing network of financial service providers.</p>
+      
+      <div class="account-details">
+        <p><strong>Your PlataPay Agent Account:</strong></p>
+        <p>Agent ID: <span class="highlight">{{agentId}}</span></p>
+        <p>Username: <span class="highlight">{{username}}</span></p>
+        <p>Temporary Password: <span class="highlight">{{temporaryPassword}}</span></p>
+        <p><strong>Important:</strong> You will be prompted to change your password on first login.</p>
+      </div>
+      
+      <p>To get started with your PlataPay Agent journey, please follow these steps:</p>
+      
+      <div style="text-align: center;">
+        <a href="{{portalLink}}" class="button">Access Agent Portal</a>
+      </div>
+      
+      <div class="training-schedule">
+        <h3>Your Training Schedule:</h3>
+        <p><strong>Orientation Webinar:</strong> {{orientationDate}}</p>
+        <p><strong>Technical Training:</strong> {{technicalTrainingDate}}</p>
+        <p><strong>Business Development Workshop:</strong> {{businessWorkshopDate}}</p>
+        <p>Calendar invitations have been sent to your email address.</p>
+      </div>
+      
+      <div class="checklist">
+        <h3>Onboarding Checklist:</h3>
+        <ul>
+          <li>Log in to the Agent Portal and complete your profile</li>
+          <li>Set up your settlement account for receiving commissions</li>
+          <li>Download the PlataPay Agent mobile app</li>
+          <li>Review the Agent Handbook in your portal</li>
+          <li>Attend all scheduled training sessions</li>
+          <li>Set up your business location with PlataPay branding</li>
+        </ul>
+      </div>
+      
+      <p>Your dedicated account manager is <span class="highlight">{{accountManagerName}}</span>. You can reach them at <a href="mailto:{{accountManagerEmail}}">{{accountManagerEmail}}</a> or {{accountManagerPhone}} for any questions or assistance.</p>
+      
+      <p>We look forward to a successful partnership!</p>
+      
+      <p>Best regards,<br>
+      The PlataPay Team</p>
+    </div>
+    <div class="footer">
+      <p>&copy; {{year}} PlataPay, a subsidiary of InnovateHub. All rights reserved.</p>
+      <p>This is an automated message, please do not reply to this email.</p>
+    </div>
+  </div>
+</body>
+</html>
