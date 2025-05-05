@@ -1,9 +1,21 @@
+"use server"
+
 import { sendTemplatedEmail } from "./email-service"
 
 /**
  * Sends an application submitted confirmation email
+ * @param email Recipient email
+ * @param fullName Recipient full name
+ * @param applicationId Application ID
  */
-export async function sendApplicationSubmittedEmail(email: string, fullName: string, applicationId: string) {
+export async function sendApplicationSubmittedEmail(
+  email: string,
+  fullName: string,
+  applicationId: string,
+): Promise<void> {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+  const statusLink = `${baseUrl}/status?id=${applicationId}`
+
   const currentDate = new Date()
   const formattedDate = currentDate.toLocaleDateString("en-US", {
     year: "numeric",
@@ -11,10 +23,7 @@ export async function sendApplicationSubmittedEmail(email: string, fullName: str
     day: "numeric",
   })
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-  const statusLink = `${baseUrl}/application/status?id=${applicationId}`
-
-  await sendTemplatedEmail(email, "Application Submitted Successfully - PlataPay", "application-submitted", {
+  await sendTemplatedEmail(email, "Application Submitted - PlataPay Agent Program", "application-submitted", {
     fullName,
     email,
     applicationId,
@@ -26,6 +35,11 @@ export async function sendApplicationSubmittedEmail(email: string, fullName: str
 
 /**
  * Sends a reminder email for incomplete applications
+ * @param email Recipient email
+ * @param fullName Recipient full name
+ * @param progressPercentage Application completion percentage
+ * @param currentStep Current application step
+ * @param expiryDate Optional expiry date
  */
 export async function sendApplicationReminderEmail(
   email: string,
@@ -33,13 +47,13 @@ export async function sendApplicationReminderEmail(
   progressPercentage: number,
   currentStep: string,
   expiryDate?: Date,
-) {
+): Promise<void> {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+  const continueLink = `${baseUrl}/application`
+
   const currentDate = new Date()
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-  const continueLink = `${baseUrl}/application?email=${encodeURIComponent(email)}`
-
-  let formattedExpiryDate: string | undefined
+  let formattedExpiryDate = ""
   if (expiryDate) {
     formattedExpiryDate = expiryDate.toLocaleDateString("en-US", {
       year: "numeric",
@@ -61,6 +75,14 @@ export async function sendApplicationReminderEmail(
 
 /**
  * Sends an application status update email
+ * @param email Recipient email
+ * @param fullName Recipient full name
+ * @param applicationId Application ID
+ * @param status Application status
+ * @param feedback Optional feedback
+ * @param isApproved Whether the application is approved
+ * @param isRejected Whether the application is rejected
+ * @param needsMoreInfo Whether more information is needed
  */
 export async function sendApplicationStatusUpdateEmail(
   email: string,
@@ -71,7 +93,13 @@ export async function sendApplicationStatusUpdateEmail(
   isApproved = false,
   isRejected = false,
   needsMoreInfo = false,
-) {
+): Promise<void> {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+
+  const statusLink = `${baseUrl}/status?id=${applicationId}`
+  const updateLink = `${baseUrl}/application?id=${applicationId}`
+  const onboardingLink = `${baseUrl}/onboarding?id=${applicationId}`
+
   const currentDate = new Date()
   const formattedDate = currentDate.toLocaleDateString("en-US", {
     year: "numeric",
@@ -79,29 +107,24 @@ export async function sendApplicationStatusUpdateEmail(
     day: "numeric",
   })
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-  const statusLink = `${baseUrl}/application/status?id=${applicationId}`
-  const updateLink = `${baseUrl}/application/update?id=${applicationId}`
-  const onboardingLink = `${baseUrl}/onboarding?id=${applicationId}`
-
   // Determine status class for styling
   let statusClass = "review"
   if (isApproved) statusClass = "approved"
   if (isRejected) statusClass = "rejected"
   if (needsMoreInfo) statusClass = "pending"
 
-  await sendTemplatedEmail(email, `PlataPay Application Status: ${status}`, "application-status-update", {
+  await sendTemplatedEmail(email, "Application Status Update - PlataPay Agent Program", "application-status-update", {
     fullName,
     email,
     applicationId,
-    submissionDate: formattedDate,
     status,
     statusClass,
-    updateDate: formattedDate,
     feedback,
     isApproved,
     isRejected,
     needsMoreInfo,
+    submissionDate: "January 15, 2023", // This would come from the database in a real app
+    updateDate: formattedDate,
     statusLink,
     updateLink,
     onboardingLink,
@@ -110,7 +133,14 @@ export async function sendApplicationStatusUpdateEmail(
 }
 
 /**
- * Sends a welcome email after application approval with onboarding information
+ * Sends an onboarding welcome email
+ * @param email Recipient email
+ * @param fullName Recipient full name
+ * @param agentId Agent ID
+ * @param username Username
+ * @param temporaryPassword Temporary password
+ * @param accountManager Account manager details
+ * @param trainingDates Training dates
  */
 export async function sendOnboardingWelcomeEmail(
   email: string,
@@ -118,7 +148,7 @@ export async function sendOnboardingWelcomeEmail(
   agentId: string,
   username: string,
   temporaryPassword: string,
-  accountManagerInfo: {
+  accountManager: {
     name: string
     email: string
     phone: string
@@ -128,32 +158,33 @@ export async function sendOnboardingWelcomeEmail(
     technicalTraining: Date
     businessWorkshop: Date
   },
-) {
-  const currentDate = new Date()
-
+): Promise<void> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
   const portalLink = `${baseUrl}/agent-portal/login`
 
+  const currentDate = new Date()
+
   // Format training dates
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date): string => {
     return date.toLocaleDateString("en-US", {
       weekday: "long",
       year: "numeric",
       month: "long",
       day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+      hour: "numeric",
+      minute: "numeric",
     })
   }
 
-  await sendTemplatedEmail(email, "Welcome to PlataPay - Your Onboarding Information", "onboarding-welcome", {
+  await sendTemplatedEmail(email, "Welcome to PlataPay - Onboarding Information", "onboarding-welcome", {
     fullName,
+    email,
     agentId,
     username,
     temporaryPassword,
-    accountManagerName: accountManagerInfo.name,
-    accountManagerEmail: accountManagerInfo.email,
-    accountManagerPhone: accountManagerInfo.phone,
+    accountManagerName: accountManager.name,
+    accountManagerEmail: accountManager.email,
+    accountManagerPhone: accountManager.phone,
     orientationDate: formatDate(trainingDates.orientation),
     technicalTrainingDate: formatDate(trainingDates.technicalTraining),
     businessWorkshopDate: formatDate(trainingDates.businessWorkshop),

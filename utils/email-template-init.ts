@@ -1,3 +1,5 @@
+"use server"
+
 import fs from "fs"
 import path from "path"
 
@@ -5,7 +7,7 @@ import path from "path"
  * Ensures that the email templates directory exists
  * Creates it if it doesn't exist
  */
-export function ensureEmailTemplatesDirectory(): void {
+export async function ensureEmailTemplatesDirectory(): Promise<void> {
   const templatesDir = path.join(process.cwd(), "email-templates")
 
   if (!fs.existsSync(templatesDir)) {
@@ -17,7 +19,7 @@ export function ensureEmailTemplatesDirectory(): void {
 /**
  * Checks if a template exists, and creates it with default content if it doesn't
  */
-export function ensureTemplateExists(templateName: string, defaultContent: string): void {
+export async function ensureTemplateExists(templateName: string, defaultContent: string): Promise<void> {
   const templatePath = path.join(process.cwd(), "email-templates", `${templateName}.hbs`)
 
   if (!fs.existsSync(templatePath)) {

@@ -7,11 +7,11 @@ import {
 } from "@/utils/application-emails"
 import { ensureEmailTemplatesDirectory } from "@/utils/email-template-init"
 
-// Ensure email templates directory exists
-ensureEmailTemplatesDirectory()
-
 export async function POST(request: Request) {
   try {
+    // Ensure email templates directory exists
+    await ensureEmailTemplatesDirectory()
+
     const { type, data } = await request.json()
 
     if (!type || !data) {

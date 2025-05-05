@@ -152,7 +152,7 @@ export function determineCurrentStep(formData: any): string {
 }
 
 /**
- * Sends reminder emails for incomplete applications
+ * Sends a reminder email for an incomplete application
  * @param email User's email
  * @param fullName User's full name
  * @param formData The application form data
@@ -189,4 +189,8 @@ export async function sendReminderIfNeeded(
 
   // Send reminder email
   await sendApplicationReminderEmail(email, fullName, progressPercentage, currentStep, expiryDate)
+}
+
+export async function sendReminders(): Promise<string> {
+  return "sendReminders() executed"
 }

@@ -3,11 +3,11 @@ import { sendTemplatedEmail } from "@/utils/email-service"
 import { generateVerificationToken } from "@/utils/token-utils"
 import { ensureEmailTemplatesDirectory } from "@/utils/email-template-init"
 
-// Ensure email templates directory exists
-ensureEmailTemplatesDirectory()
-
 export async function POST(request: Request) {
   try {
+    // Ensure email templates directory exists
+    await ensureEmailTemplatesDirectory()
+
     const { fullName, email } = await request.json()
 
     if (!fullName || !email) {
@@ -37,6 +37,7 @@ export async function POST(request: Request) {
       fullName,
       email,
       verificationLink,
+      verificationCode: token.substring(0, 6).toUpperCase(),
       date: formattedDate,
       year: currentDate.getFullYear(),
     })

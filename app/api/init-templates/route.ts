@@ -113,10 +113,10 @@ const verificationTemplate = `<!DOCTYPE html>
 export async function GET(request: Request) {
   try {
     // Ensure the directory exists
-    ensureEmailTemplatesDirectory()
+    await ensureEmailTemplatesDirectory()
 
     // Create the verification template if it doesn't exist
-    ensureTemplateExists("verification", verificationTemplate)
+    await ensureTemplateExists("verification", verificationTemplate)
 
     // Check if all templates exist
     const templatesDir = path.join(process.cwd(), "email-templates")
