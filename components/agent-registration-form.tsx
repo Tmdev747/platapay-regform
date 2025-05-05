@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -11,8 +11,12 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
-import { Mic, MicOff, Save, Loader2 } from "lucide-react"
+import { Mic, MicOff, Save, Loader2, VolumeX, Volume2, Info } from "lucide-react"
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition"
+import { useTextToSpeech } from "@/hooks/use-text-to-speech"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { useRouter } from "next/navigation"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 // Form schema
 const formSchema = z.object({
@@ -37,6 +41,22 @@ interface AgentRegistrationFormProps {
   embedded?: boolean
 }
 
+// Voice prompts for each field
+const fieldVoicePrompts = {
+  name: "Please enter your full legal name as it appears on your ID documents.",
+  email: "Enter your active email address. We'll send important updates to this address.",
+  phone: "Enter your mobile number. This will be used for verification and important notifications.",
+  address: "Enter your complete business address including street, barangay, city, and postal code.",
+  businessName: "Enter your business name as registered with DTI or SEC.",
+  businessType: "What type of business do you operate? For example: sari-sari store, pharmacy, or remittance center.",
+  additional_info:
+    "Please provide any additional information about your business that might be relevant for your application.",
+}
+
+// Welcome message
+const welcomeMessage =
+  "Welcome to the PlataPay Agent Registration. I'll guide you through the application process. You can click on the microphone icon next to each field to use voice input, or click the speaker icon to hear instructions for each field. Let's get started!"
+
 export function AgentRegistrationForm({
   userId,
   email,
@@ -48,8 +68,14 @@ export function AgentRegistrationForm({
   const [isSaving, setIsSaving] = useState(false)
   const [activeField, setActiveField] = useState<keyof FormValues | null>(null)
   const [formData, setFormData] = useState<Partial<FormValues> | null>(null)
+  const [submissionStatus, setSubmissionStatus] = useState<"idle" | "success" | "error">("idle")
+  const [errorMessage, setErrorMessage] = useState<string>("")
+  const [voiceAssistantEnabled, setVoiceAssistantEnabled] = useState(false)
+  const [isWelcomePlayed, setIsWelcomePlayed] = useState(false)
   const { toast } = useToast()
   const supabase = createBrowserClient()
+  const router = useRouter()
+  const formRef = useRef<HTMLFormElement>(null)
 
   // Add geolocation functionality to the form
   const [locationStatus, setLocationStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
@@ -57,6 +83,9 @@ export function AgentRegistrationForm({
     latitude: null,
     longitude: null,
   })
+
+  // Text to speech hook
+  const { speak, stop, isSpeaking } = useTextToSpeech()
 
   // Initialize form
   const form = useForm<FormValues>({
@@ -70,7 +99,16 @@ export function AgentRegistrationForm({
       businessType: "",
       additional_info: "",
     },
+    mode: "onChange", // Validate on change for better user feedback
   })
+
+  // Play welcome message when form loads
+  useEffect(() => {
+    if (voiceAssistantEnabled && !isWelcomePlayed) {
+      speak(welcomeMessage)
+      setIsWelcomePlayed(true)
+    }
+  }, [voiceAssistantEnabled, isWelcomePlayed, speak])
 
   // Load saved form data
   useEffect(() => {
@@ -147,8 +185,35 @@ export function AgentRegistrationForm({
       stopListening()
       setActiveField(null)
     } else {
+      // Stop any ongoing speech before starting listening
+      if (isSpeaking) {
+        stop()
+      }
       setActiveField(fieldName)
       startListening()
+    }
+  }
+
+  // Handle voice instructions for a field
+  const handleVoiceInstructions = (fieldName: keyof FormValues) => {
+    if (isSpeaking) {
+      stop()
+    } else {
+      speak(fieldVoicePrompts[fieldName])
+    }
+  }
+
+  // Toggle voice assistant
+  const toggleVoiceAssistant = () => {
+    if (voiceAssistantEnabled) {
+      stop() // Stop any ongoing speech
+      setVoiceAssistantEnabled(false)
+    } else {
+      setVoiceAssistantEnabled(true)
+      if (!isWelcomePlayed) {
+        speak(welcomeMessage)
+        setIsWelcomePlayed(true)
+      }
     }
   }
 
@@ -286,6 +351,8 @@ export function AgentRegistrationForm({
   const onSubmit = async (data: FormValues) => {
     try {
       setIsSubmitting(true)
+      setSubmissionStatus("idle")
+      setErrorMessage("")
 
       // Get geolocation if not provided
       if (!coordinates.latitude || !coordinates.longitude) {
@@ -307,22 +374,43 @@ export function AgentRegistrationForm({
         data.longitude = coordinates.longitude
       }
 
-      // Submit to Supabase
-      const { error } = await supabase.from("agents").insert({
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        address: data.address,
-        business_name: data.businessName,
-        business_type: data.businessType,
-        location: {
-          latitude: data.latitude,
-          longitude: data.longitude,
-        },
-        additional_info: data.additional_info,
-        status: "pending", // Default status
-        user_id: userId,
-      })
+      // Submit to Supabase with retry logic
+      let retries = 0
+      const maxRetries = 3
+      let error = null
+
+      while (retries < maxRetries) {
+        try {
+          const { error: submissionError } = await supabase.from("agents").insert({
+            name: data.name,
+            email: data.email,
+            phone: data.phone,
+            address: data.address,
+            business_name: data.businessName,
+            business_type: data.businessType,
+            location: {
+              latitude: data.latitude,
+              longitude: data.longitude,
+            },
+            additional_info: data.additional_info,
+            status: "pending", // Default status
+            user_id: userId,
+          })
+
+          if (!submissionError) {
+            error = null
+            break // Success, exit the retry loop
+          }
+
+          error = submissionError
+          retries++
+          await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait 1 second before retrying
+        } catch (e) {
+          error = e
+          retries++
+          await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait 1 second before retrying
+        }
+      }
 
       if (error) throw error
 
@@ -339,57 +427,145 @@ export function AgentRegistrationForm({
       }
 
       // Show success message
+      setSubmissionStatus("success")
       toast({
         title: "Registration Successful",
         description: "Your application has been submitted for review.",
       })
 
-      // Call onSuccess callback if provided
-      onSuccess?.()
+      // Voice feedback for success
+      if (voiceAssistantEnabled) {
+        speak("Your application has been successfully submitted. We will review your information and contact you soon.")
+      }
+
+      // Redirect after a short delay to allow the user to see the success message
+      setTimeout(() => {
+        // Call onSuccess callback if provided
+        onSuccess?.()
+
+        // Redirect to confirmation page if no callback provided
+        if (!onSuccess) {
+          router.push("/register/confirmation")
+        }
+      }, 2000)
     } catch (err) {
       console.error("Error submitting form:", err)
+      setSubmissionStatus("error")
+      setErrorMessage(
+        err instanceof Error ? err.message : "There was an error submitting your application. Please try again.",
+      )
       toast({
         title: "Registration Failed",
         description: "There was an error submitting your application. Please try again.",
         variant: "destructive",
       })
+
+      // Voice feedback for error
+      if (voiceAssistantEnabled) {
+        speak("There was an error submitting your application. Please check your information and try again.")
+      }
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  // Reset form error state when user makes changes
+  useEffect(() => {
+    const subscription = form.watch(() => {
+      if (submissionStatus === "error") {
+        setSubmissionStatus("idle")
+        setErrorMessage("")
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [form, submissionStatus])
+
   return (
     <Card className={embedded ? "shadow-none border-0" : ""}>
-      <CardHeader>
+      <CardHeader className="relative">
+        <div className="absolute right-6 top-6 flex items-center gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={toggleVoiceAssistant}
+                  className={voiceAssistantEnabled ? "bg-primary/10" : ""}
+                >
+                  {voiceAssistantEnabled ? (
+                    <Volume2 className="h-4 w-4 text-primary" />
+                  ) : (
+                    <VolumeX className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {voiceAssistantEnabled ? "Disable voice assistant" : "Enable voice assistant"}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
         <CardTitle>PlataPay Agent Registration</CardTitle>
         <CardDescription>Fill out the form below to register as a PlataPay agent</CardDescription>
       </CardHeader>
       <CardContent>
+        {submissionStatus === "success" && (
+          <Alert className="mb-6 bg-green-50 border-green-200">
+            <AlertTitle className="text-green-800">Registration Successful</AlertTitle>
+            <AlertDescription className="text-green-700">
+              Your application has been submitted for review. We will contact you soon.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {submissionStatus === "error" && (
+          <Alert className="mb-6 bg-red-50 border-red-200" variant="destructive">
+            <AlertTitle>Registration Failed</AlertTitle>
+            <AlertDescription>
+              {errorMessage || "There was an error submitting your application. Please try again."}
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form ref={formRef} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className={activeField === "name" ? "ring-2 ring-primary/20 rounded-md p-2 -m-2" : ""}>
                     <div className="flex items-center justify-between">
                       <FormLabel>Full Name</FormLabel>
-                      {isSpeechRecognitionSupported && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleVoiceInput("name")}
-                          className={activeField === "name" ? "text-primary" : "text-muted-foreground"}
-                        >
-                          {isListening && activeField === "name" ? (
-                            <MicOff className="h-4 w-4" />
-                          ) : (
-                            <Mic className="h-4 w-4" />
-                          )}
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {voiceAssistantEnabled && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleVoiceInstructions("name")}
+                            className="text-muted-foreground"
+                          >
+                            <Info className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {isSpeechRecognitionSupported && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleVoiceInput("name")}
+                            className={activeField === "name" ? "text-primary" : "text-muted-foreground"}
+                          >
+                            {isListening && activeField === "name" ? (
+                              <MicOff className="h-4 w-4" />
+                            ) : (
+                              <Mic className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <FormControl>
                       <Input placeholder="Juan Dela Cruz" {...field} />
@@ -403,24 +579,37 @@ export function AgentRegistrationForm({
                 control={form.control}
                 name="email"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className={activeField === "email" ? "ring-2 ring-primary/20 rounded-md p-2 -m-2" : ""}>
                     <div className="flex items-center justify-between">
                       <FormLabel>Email Address</FormLabel>
-                      {isSpeechRecognitionSupported && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleVoiceInput("email")}
-                          className={activeField === "email" ? "text-primary" : "text-muted-foreground"}
-                        >
-                          {isListening && activeField === "email" ? (
-                            <MicOff className="h-4 w-4" />
-                          ) : (
-                            <Mic className="h-4 w-4" />
-                          )}
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {voiceAssistantEnabled && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleVoiceInstructions("email")}
+                            className="text-muted-foreground"
+                          >
+                            <Info className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {isSpeechRecognitionSupported && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleVoiceInput("email")}
+                            className={activeField === "email" ? "text-primary" : "text-muted-foreground"}
+                          >
+                            {isListening && activeField === "email" ? (
+                              <MicOff className="h-4 w-4" />
+                            ) : (
+                              <Mic className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <FormControl>
                       <Input type="email" placeholder="juan@example.com" {...field} />
@@ -434,24 +623,37 @@ export function AgentRegistrationForm({
                 control={form.control}
                 name="phone"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className={activeField === "phone" ? "ring-2 ring-primary/20 rounded-md p-2 -m-2" : ""}>
                     <div className="flex items-center justify-between">
                       <FormLabel>Phone Number</FormLabel>
-                      {isSpeechRecognitionSupported && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleVoiceInput("phone")}
-                          className={activeField === "phone" ? "text-primary" : "text-muted-foreground"}
-                        >
-                          {isListening && activeField === "phone" ? (
-                            <MicOff className="h-4 w-4" />
-                          ) : (
-                            <Mic className="h-4 w-4" />
-                          )}
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {voiceAssistantEnabled && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleVoiceInstructions("phone")}
+                            className="text-muted-foreground"
+                          >
+                            <Info className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {isSpeechRecognitionSupported && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleVoiceInput("phone")}
+                            className={activeField === "phone" ? "text-primary" : "text-muted-foreground"}
+                          >
+                            {isListening && activeField === "phone" ? (
+                              <MicOff className="h-4 w-4" />
+                            ) : (
+                              <Mic className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <FormControl>
                       <Input placeholder="09123456789" {...field} />
@@ -465,24 +667,39 @@ export function AgentRegistrationForm({
                 control={form.control}
                 name="businessName"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem
+                    className={activeField === "businessName" ? "ring-2 ring-primary/20 rounded-md p-2 -m-2" : ""}
+                  >
                     <div className="flex items-center justify-between">
                       <FormLabel>Business Name</FormLabel>
-                      {isSpeechRecognitionSupported && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleVoiceInput("businessName")}
-                          className={activeField === "businessName" ? "text-primary" : "text-muted-foreground"}
-                        >
-                          {isListening && activeField === "businessName" ? (
-                            <MicOff className="h-4 w-4" />
-                          ) : (
-                            <Mic className="h-4 w-4" />
-                          )}
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {voiceAssistantEnabled && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleVoiceInstructions("businessName")}
+                            className="text-muted-foreground"
+                          >
+                            <Info className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {isSpeechRecognitionSupported && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleVoiceInput("businessName")}
+                            className={activeField === "businessName" ? "text-primary" : "text-muted-foreground"}
+                          >
+                            {isListening && activeField === "businessName" ? (
+                              <MicOff className="h-4 w-4" />
+                            ) : (
+                              <Mic className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <FormControl>
                       <Input placeholder="Your Business Name" {...field} />
@@ -496,24 +713,39 @@ export function AgentRegistrationForm({
                 control={form.control}
                 name="businessType"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem
+                    className={activeField === "businessType" ? "ring-2 ring-primary/20 rounded-md p-2 -m-2" : ""}
+                  >
                     <div className="flex items-center justify-between">
                       <FormLabel>Business Type</FormLabel>
-                      {isSpeechRecognitionSupported && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleVoiceInput("businessType")}
-                          className={activeField === "businessType" ? "text-primary" : "text-muted-foreground"}
-                        >
-                          {isListening && activeField === "businessType" ? (
-                            <MicOff className="h-4 w-4" />
-                          ) : (
-                            <Mic className="h-4 w-4" />
-                          )}
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {voiceAssistantEnabled && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleVoiceInstructions("businessType")}
+                            className="text-muted-foreground"
+                          >
+                            <Info className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {isSpeechRecognitionSupported && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleVoiceInput("businessType")}
+                            className={activeField === "businessType" ? "text-primary" : "text-muted-foreground"}
+                          >
+                            {isListening && activeField === "businessType" ? (
+                              <MicOff className="h-4 w-4" />
+                            ) : (
+                              <Mic className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <FormControl>
                       <Input placeholder="e.g. Retail Store, Pharmacy, etc." {...field} />
@@ -528,24 +760,37 @@ export function AgentRegistrationForm({
               control={form.control}
               name="address"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className={activeField === "address" ? "ring-2 ring-primary/20 rounded-md p-2 -m-2" : ""}>
                   <div className="flex items-center justify-between">
                     <FormLabel>Business Address</FormLabel>
-                    {isSpeechRecognitionSupported && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleVoiceInput("address")}
-                        className={activeField === "address" ? "text-primary" : "text-muted-foreground"}
-                      >
-                        {isListening && activeField === "address" ? (
-                          <MicOff className="h-4 w-4" />
-                        ) : (
-                          <Mic className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {voiceAssistantEnabled && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleVoiceInstructions("address")}
+                          className="text-muted-foreground"
+                        >
+                          <Info className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {isSpeechRecognitionSupported && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleVoiceInput("address")}
+                          className={activeField === "address" ? "text-primary" : "text-muted-foreground"}
+                        >
+                          {isListening && activeField === "address" ? (
+                            <MicOff className="h-4 w-4" />
+                          ) : (
+                            <Mic className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <FormControl>
                     <Textarea placeholder="123 Main St, Manila, Philippines" {...field} />
@@ -580,24 +825,39 @@ export function AgentRegistrationForm({
               control={form.control}
               name="additional_info"
               render={({ field }) => (
-                <FormItem>
+                <FormItem
+                  className={activeField === "additional_info" ? "ring-2 ring-primary/20 rounded-md p-2 -m-2" : ""}
+                >
                   <div className="flex items-center justify-between">
                     <FormLabel>Additional Information</FormLabel>
-                    {isSpeechRecognitionSupported && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleVoiceInput("additional_info")}
-                        className={activeField === "additional_info" ? "text-primary" : "text-muted-foreground"}
-                      >
-                        {isListening && activeField === "additional_info" ? (
-                          <MicOff className="h-4 w-4" />
-                        ) : (
-                          <Mic className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {voiceAssistantEnabled && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleVoiceInstructions("additional_info")}
+                          className="text-muted-foreground"
+                        >
+                          <Info className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {isSpeechRecognitionSupported && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleVoiceInput("additional_info")}
+                          className={activeField === "additional_info" ? "text-primary" : "text-muted-foreground"}
+                        >
+                          {isListening && activeField === "additional_info" ? (
+                            <MicOff className="h-4 w-4" />
+                          ) : (
+                            <Mic className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <FormControl>
                     <Textarea placeholder="Any additional information about your business" {...field} />

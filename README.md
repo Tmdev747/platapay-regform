@@ -1,30 +1,101 @@
-# React form design
+# PlataPay Agent Application Portal
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+This is the official PlataPay Agent Application Portal, a secure platform for managing agent applications.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/innovatehubteam/v0-react-form-design)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/ddtTwO6f2iQ)
+## Production Setup
 
-## Overview
+### Prerequisites
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+- Node.js 18+ and npm
+- PostgreSQL database
+- Supabase account
+- Mapbox account for location services
+- ElevenLabs account for voice services
+- Groq API key for AI services
 
-## Deployment
+### Environment Variables
 
-Your project is live at:
+Create a `.env.local` file with the following variables:
 
-**[https://vercel.com/innovatehubteam/v0-react-form-design](https://vercel.com/innovatehubteam/v0-react-form-design)**
+\`\`\`
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+SUPABASE_JWT_SECRET=your_supabase_jwt_secret
 
-## Build your app
+# Mapbox Configuration (server-side only)
+MAPBOX_TOKEN=your_mapbox_token
 
-Continue building your app on:
+# ElevenLabs Configuration (for voice)
+ELEVEN_LABS_API_KEY=your_elevenlabs_api_key
+ELEVEN_LABS_VOICE_ID=your_elevenlabs_voice_id
 
-**[https://v0.dev/chat/projects/ddtTwO6f2iQ](https://v0.dev/chat/projects/ddtTwO6f2iQ)**
+# Groq Configuration (for AI)
+GROQ_API_KEY=your_groq_api_key
 
-## How It Works
+# Application URL
+NEXT_PUBLIC_APP_URL=https://your-production-domain.com
+\`\`\`
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+### Database Setup
+
+1. Create a new Supabase project
+2. Run the database setup script:
+
+\`\`\`bash
+npm run setup:database
+\`\`\`
+
+### Admin User Creation
+
+Create an admin user with the following command:
+
+\`\`\`bash
+npm run create:admin
+\`\`\`
+
+Follow the prompts to enter admin email, password, and name.
+
+### Build and Deployment
+
+1. Install dependencies:
+
+\`\`\`bash
+npm install
+\`\`\`
+
+2. Build the application:
+
+\`\`\`bash
+npm run build
+\`\`\`
+
+3. Start the production server:
+
+\`\`\`bash
+npm start
+\`\`\`
+
+### Security Considerations
+
+- Ensure all environment variables are properly set and secured
+- Use strong passwords for admin accounts
+- Enable MFA for admin accounts in Supabase
+- Regularly update dependencies
+- Monitor application logs for suspicious activities
+- Set up proper backup procedures for the database
+
+## Features
+
+- Secure authentication system
+- Agent application management
+- Application status tracking
+- Admin review interface
+- Interactive map of agent locations
+- Voice-assisted application form
+- Email notifications for application status changes
+
+## License
+
+Copyright © PlataPay. All rights reserved.

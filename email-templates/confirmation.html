@@ -6,7 +6,7 @@
   <title>Confirm Your PlataPay Agent Registration</title>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: Arial, sans-serif;
       line-height: 1.6;
       color: #333;
       margin: 0;
@@ -36,16 +36,13 @@
     .button {
       display: inline-block;
       padding: 12px 24px;
-      background-color: #0070f3;
-      color: white;
+      background-color: #7c3aed;
+      color: white !important;
       text-decoration: none;
       border-radius: 4px;
       font-weight: 600;
       margin: 20px 0;
       text-align: center;
-    }
-    .button:hover {
-      background-color: #0051cc;
     }
     .footer {
       text-align: center;
@@ -61,26 +58,19 @@
       margin-top: 20px;
       font-size: 14px;
     }
-    @media only screen and (max-width: 600px) {
-      .container {
-        width: 100%;
-        border-radius: 0;
-      }
-    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <img src="{{ .SiteURL }}/logo.png" alt="PlataPay Logo" class="logo">
       <h1>Confirm Your PlataPay Agent Registration</h1>
     </div>
     <div class="content">
-      <p>Hello {{ .Data.full_name }},</p>
+      <p>Hello,</p>
       <p>Thank you for starting your registration as a PlataPay agent. To continue with your application, please confirm your email address by clicking the button below:</p>
       
       <div style="text-align: center;">
-        <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email" class="button">Confirm Email & Continue Registration</a>
+        <a href="{{ .ConfirmationURL }}" class="button">Confirm Email & Continue Registration</a>
       </div>
       
       <p>After confirming your email, you'll be able to set up your password and complete your agent profile.</p>

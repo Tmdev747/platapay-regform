@@ -62,7 +62,9 @@
     "@ai-sdk/groq": "latest",
     "ai": "latest",
     "@supabase/auth-helpers-nextjs": "latest",
-    "mapbox-gl": "latest"
+    "mapbox-gl": "latest",
+    "crypto": "latest",
+    "readline": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

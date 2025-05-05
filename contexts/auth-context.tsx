@@ -13,6 +13,7 @@ type AuthContextType = {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
+  resendConfirmationEmail: (email: string) => Promise<{ error: Error | null }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -85,6 +86,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const resendConfirmationEmail = async (email: string) => {
+    setIsLoading(true)
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+      })
+      return { error }
+    } catch (err) {
+      console.error("Unexpected error in resendConfirmationEmail:", err)
+      return { error: err instanceof Error ? err : new Error("An unexpected error occurred") }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const signOut = async () => {
     setIsLoading(true)
     try {
@@ -98,7 +115,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      isLoading, 
+      signIn, 
+      signUp, 
+      signOut,
+      resendConfirmationEmail 
+    }}>
       {children}
     </AuthContext.Provider>
   )
