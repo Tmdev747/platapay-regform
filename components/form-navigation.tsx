@@ -78,37 +78,45 @@ export function FormNavigation({ currentStep, totalSteps, onNext, onPrev, onSubm
 
   return (
     <div className="flex justify-between mt-8">
-      {currentStep > 0 && (
-        <button
-          type="button"
-          onClick={onPrev}
-          className="px-6 py-2 border border-[#58317A] text-[#58317A] rounded-md hover:bg-gray-100"
-        >
-          Previous
-        </button>
-      )}
+      <div className="w-1/3">
+        {currentStep > 0 && (
+          <button
+            type="button"
+            onClick={onPrev}
+            className="px-6 py-2 border border-[#58317A] text-[#58317A] rounded-md hover:bg-gray-100"
+          >
+            Previous
+          </button>
+        )}
+      </div>
 
-      {currentStep < totalSteps - 1 ? (
-        <button
-          type="button"
-          onClick={handleNext}
-          className="ml-auto px-6 py-2 text-white rounded-md bg-[#58317A] hover:bg-[#482968]"
-        >
-          Next
-        </button>
-      ) : (
-        <button
-          type="submit"
-          onClick={async (e) => {
-            e.preventDefault()
-            // Remove validation check and just submit
-            onSubmit()
-          }}
-          className="ml-auto px-6 py-2 text-white rounded-md bg-[#58317A] hover:bg-[#482968]"
-        >
-          Submit
-        </button>
-      )}
+      <div className="w-1/3 flex justify-center">
+        {currentStep === totalSteps - 1 && (
+          <button
+            type="submit"
+            onClick={async (e) => {
+              e.preventDefault()
+              // Remove validation check and just submit
+              onSubmit()
+            }}
+            className="px-8 py-3 text-white rounded-md bg-[#58317A] hover:bg-[#482968] font-medium"
+          >
+            Submit Application
+          </button>
+        )}
+      </div>
+
+      <div className="w-1/3 flex justify-end">
+        {currentStep < totalSteps - 1 && (
+          <button
+            type="button"
+            onClick={handleNext}
+            className="px-6 py-2 text-white rounded-md bg-[#58317A] hover:bg-[#482968]"
+          >
+            Next
+          </button>
+        )}
+      </div>
     </div>
   )
 }

@@ -1,5 +1,6 @@
-import ApplicationForm from "@/components/application-form"
+import { redirect } from "next/navigation"
 
 export default function ApplicationPage() {
-  return <ApplicationForm />
+  // Redirect to the home page since we now start directly with the application form
+  redirect("/")
 }

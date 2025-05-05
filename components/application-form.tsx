@@ -27,7 +27,7 @@ interface ApplicationFormProps {
 
 export default function ApplicationForm({ initialEmail = "", initialName = "" }: ApplicationFormProps) {
   const router = useRouter()
-  const [consentAccepted, setConsentAccepted] = useState(false)
+  const [consentAccepted, setConsentAccepted] = useState(true)
   const [currentStep, setCurrentStep] = useState(0)
   const [showAssistant, setShowAssistant] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -151,67 +151,24 @@ export default function ApplicationForm({ initialEmail = "", initialName = "" }:
 
   // Load saved form data and user email on component mount
   useEffect(() => {
-    // If we have initialEmail, use it
-    if (initialEmail) {
-      setUserEmail(initialEmail)
-      formMethods.setValue("email", initialEmail)
+    // Skip email verification check and just initialize the form
+    const savedFormData = localStorage.getItem(`platapayFormData_temp`)
+    if (savedFormData) {
+      try {
+        const parsedData = JSON.parse(savedFormData)
+        // Reset form with saved data
+        formMethods.reset(parsedData)
 
-      // Try to load saved form data for this email
-      const savedFormData = localStorage.getItem(`platapayFormData_${initialEmail}`)
-      if (savedFormData) {
-        try {
-          const parsedData = JSON.parse(savedFormData)
-          // Reset form with saved data
-          formMethods.reset(parsedData)
-
-          // Get last saved timestamp
-          const lastSavedTime = localStorage.getItem(`platapayLastSaved_${initialEmail}`)
-          if (lastSavedTime) {
-            setLastSaved(new Date(lastSavedTime))
-          }
-        } catch (error) {
-          console.error("Error loading saved form data:", error)
+        // Get last saved timestamp
+        const lastSavedTime = localStorage.getItem(`platapayLastSaved_temp`)
+        if (lastSavedTime) {
+          setLastSaved(new Date(lastSavedTime))
         }
+      } catch (error) {
+        console.error("Error loading saved form data:", error)
       }
-
-      // Store the email in localStorage for future reference
-      localStorage.setItem("platapayUserEmail", initialEmail)
-      return
     }
-
-    // Check if we have a stored email
-    const email = localStorage.getItem("platapayUserEmail")
-    if (email) {
-      setUserEmail(email)
-
-      // Try to load saved form data for this email
-      const savedFormData = localStorage.getItem(`platapayFormData_${email}`)
-      if (savedFormData) {
-        try {
-          const parsedData = JSON.parse(savedFormData)
-          // Reset form with saved data
-          formMethods.reset(parsedData)
-
-          // Set the email field
-          formMethods.setValue("email", email)
-
-          // Get last saved timestamp
-          const lastSavedTime = localStorage.getItem(`platapayLastSaved_${email}`)
-          if (lastSavedTime) {
-            setLastSaved(new Date(lastSavedTime))
-          }
-        } catch (error) {
-          console.error("Error loading saved form data:", error)
-        }
-      } else {
-        // If no saved data, at least set the email
-        formMethods.setValue("email", email)
-      }
-    } else {
-      // If no verified email, redirect to home page
-      router.push("/")
-    }
-  }, [formMethods, router, initialEmail])
+  }, [formMethods, router])
 
   const steps = [
     { id: "personal", title: "Personal Information", component: <PersonalInfo /> },
@@ -240,15 +197,13 @@ export default function ApplicationForm({ initialEmail = "", initialName = "" }:
   }
 
   const saveFormData = async () => {
-    if (!userEmail) return
-
     setIsSaving(true)
     try {
       const formData = formMethods.getValues()
-      localStorage.setItem(`platapayFormData_${userEmail}`, JSON.stringify(formData))
+      localStorage.setItem(`platapayFormData_temp`, JSON.stringify(formData))
 
       const now = new Date()
-      localStorage.setItem(`platapayLastSaved_${userEmail}`, now.toISOString())
+      localStorage.setItem(`platapayLastSaved_temp`, now.toISOString())
       setLastSaved(now)
 
       // In a real application, you would also save to a server/database here
